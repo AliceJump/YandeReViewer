@@ -12,11 +12,7 @@ class PostPagingSource(
     override suspend fun load(params: LoadParams<Int>): LoadResult<Int, Post> {
         val page = params.key ?: 1
         return try {
-            val temp = if (tags.isNotEmpty())
-                "$tags rating:s rating:q rating:e"
-            else
-                "rating:s rating:q rating:e"
-            val posts = RetrofitClient.api.getPosts(tags = temp, page = page)
+            val posts = RetrofitClient.api.getPosts(tags = tags, page = page)
             LoadResult.Page(
                 data = posts,
                 prevKey = if (page == 1) null else page - 1,
