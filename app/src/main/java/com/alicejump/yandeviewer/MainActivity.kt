@@ -116,6 +116,7 @@ class MainActivity : AppCompatActivity() {
             onPostClick = { post ->
                 val intent = Intent(this, DetailActivity::class.java).apply {
                     putExtra("url", post.file_url)
+                    putExtra("preview_url", post.preview_url)
                     putExtra("tags", post.tags)
                 }
                 startActivity(intent)

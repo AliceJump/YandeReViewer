@@ -18,6 +18,7 @@ import androidx.core.content.ContextCompat
 import androidx.lifecycle.lifecycleScope
 import coil.imageLoader
 import coil.load
+import coil.memory.MemoryCache
 import coil.request.ImageRequest
 import coil.request.SuccessResult
 import com.alicejump.yandeviewer.MainActivity.Companion.NEW_SEARCH_TAG
@@ -43,6 +44,7 @@ class DetailActivity : AppCompatActivity() {
         tagsContainer = findViewById(R.id.tagsContainer)
 
         imageUrl = intent.getStringExtra("url")
+        val previewUrl = intent.getStringExtra("preview_url")
         val tags = intent.getStringExtra("tags")
 
         if (imageUrl == null) {
@@ -51,8 +53,13 @@ class DetailActivity : AppCompatActivity() {
             return
         }
 
-        // Load image using Coil
-        imageView.load(imageUrl)
+        // Load image using Coil with placeholder from memory cache
+        imageView.load(imageUrl) {
+            if (previewUrl != null) {
+                placeholderMemoryCacheKey(MemoryCache.Key(previewUrl))
+            }
+            error(android.R.drawable.ic_menu_close_clear_cancel)
+        }
 
         // Click to view full screen
         imageView.setOnClickListener {
