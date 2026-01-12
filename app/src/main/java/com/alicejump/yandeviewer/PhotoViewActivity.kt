@@ -7,7 +7,6 @@ import coil.load
 import com.github.chrisbanes.photoview.PhotoView
 
 class PhotoViewActivity : AppCompatActivity() {
-
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_photo_view)
