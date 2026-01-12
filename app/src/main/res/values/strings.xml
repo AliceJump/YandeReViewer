@@ -1,3 +1,9 @@
 <resources>
     <string name="app_name">yandeviewer</string>
+    <string name="search_hint">tags</string>
+    <string name="search_button_text">search</string>
+    <string name="rating_s">rating:s</string>
+    <string name="rating_q">rating:q</string>
+    <string name="rating_e">rating:e</string>
+    <string name="tags_label">tags:</string>
 </resources>

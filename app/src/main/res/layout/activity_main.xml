@@ -10,13 +10,38 @@
         android:id="@+id/searchBox"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:hint="Search" />
+        android:hint="@string/search_hint" />
 
-    <Button
-        android:id="@+id/searchBtn"
-        android:layout_width="wrap_content"
+    <LinearLayout
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="Search"/>
+        android:orientation="horizontal"
+        android:gravity="center_vertical">
+
+        <Button
+            android:id="@+id/searchBtn"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/search_button_text" />
+
+        <CheckBox
+            android:id="@+id/rating_s_checkbox"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/rating_s" />
+
+        <CheckBox
+            android:id="@+id/rating_q_checkbox"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/rating_q" />
+
+        <CheckBox
+            android:id="@+id/rating_e_checkbox"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/rating_e" />
+    </LinearLayout>
 
     <androidx.recyclerview.widget.RecyclerView
         android:id="@+id/recyclerView"
