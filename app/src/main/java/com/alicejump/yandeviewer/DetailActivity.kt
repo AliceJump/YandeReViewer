@@ -54,6 +54,14 @@ class DetailActivity : AppCompatActivity() {
         // Load image using Coil
         imageView.load(imageUrl)
 
+        // Click to view full screen
+        imageView.setOnClickListener {
+            val intent = Intent(this, PhotoViewActivity::class.java).apply {
+                putExtra("url", imageUrl)
+            }
+            startActivity(intent)
+        }
+
         // Setup tags
         setupTags(tags)
 
