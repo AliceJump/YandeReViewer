@@ -12,7 +12,7 @@ jobs:
   build-and-upload:
     # 指定任务运行的操作系统环境
     runs-on: ubuntu-latest
-    
+
     # --- 添加这个权限块 ---
     permissions:
       contents: write
@@ -32,23 +32,33 @@ jobs:
           distribution: 'temurin'
           cache: gradle
 
-      # 第 3 步：让 gradlew 文件拥有可执行权限
+      # --- 新增步骤：从 Git 标签中提取版本号并更新 Gradle 文件 ---
+      - name: Update Version Name from Tag
+        run: |
+          # 从 GITHUB_REF (refs/tags/v1.x.x) 中提取版本号，移除 'refs/tags/v'
+          VERSION_NAME=${{ github.ref_name }}
+          VERSION_NAME=${VERSION_NAME#v}
+          
+          echo "Using version name: $VERSION_NAME"
+          
+          # 使用 sed 命令替换 build.gradle.kts 文件中的占位符
+          sed -i "s/versionName = \"TAG_VERSION\"/versionName = \"$VERSION_NAME\"/" app/build.gradle.kts
+
+      # ----------------------------------------------------
+
+      # 第 4 步：让 gradlew 文件拥有可执行权限
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
 
-      # 第 4 步：执行 Gradle 打包命令
+      # 第 5 步：执行 Gradle 打包命令
       - name: Build with Gradle (Debug)
         run: ./gradlew assembleDebug
 
-      # 第 5 步：创建 Release 并上传 APK
+      # 第 6 步：创建 Release 并上传 APK
       - name: Create Release and Upload APK
         uses: ncipollo/release-action@v1
         with:
-          # 指定要上传的文件
           artifacts: "app/build/outputs/apk/debug/app-debug.apk"
-          # 从触发工作流的 Git 标签中自动获取版本名称
           tag: ${{ github.ref_name }}
-          # 自动生成发布日志
           generateReleaseNotes: true
-          # GitHub 的认证令牌
           token: ${{ secrets.GITHUB_TOKEN }}
