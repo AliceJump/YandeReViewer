@@ -55,6 +55,10 @@ android {
             )
             signingConfig = signingConfigs.getByName("release")
         }
+        debug {
+            // Also use the release signing config for debug builds
+            signingConfig = signingConfigs.getByName("release")
+        }
     }
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17

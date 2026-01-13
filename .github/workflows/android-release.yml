@@ -41,7 +41,8 @@ jobs:
           VERSION_NAME=${{ github.ref_name }}
           VERSION_NAME=${VERSION_NAME#v}
           echo "Updating appVersionName to $VERSION_NAME"
-          sed -i "s/appVersionName=.*/appVersionName=$VERSION_NAME/" gradle.properties
+          # 使用更健壮的 sed 命令，忽略等号周围的空格
+          sed -i "s/^appVersionName\s*=.*/appVersionName=$VERSION_NAME/" gradle.properties
 
       # 5. 让 gradlew 文件拥有可执行权限
       - name: Grant execute permission for gradlew
