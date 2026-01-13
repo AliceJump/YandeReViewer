@@ -1,6 +1,7 @@
 package com.alicejump.yandeviewer.network
 
 import com.alicejump.yandeviewer.model.Post
+import com.alicejump.yandeviewer.model.TagInfo
 import retrofit2.http.GET
 import retrofit2.http.Query
 
@@ -11,4 +12,9 @@ interface YandeApi {
         @Query("limit") limit: Int = 20,
         @Query("page") page: Int
     ): List<Post>
+
+    @GET("tag.json")
+    suspend fun getTags(
+        @Query("name") name: String
+    ): List<TagInfo>
 }

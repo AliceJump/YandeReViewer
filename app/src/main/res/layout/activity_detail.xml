@@ -22,22 +22,82 @@
             app:layout_constraintEnd_toEndOf="parent" />
 
         <TextView
-            android:id="@+id/tags_label"
+            android:id="@+id/artist_label"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="tags:"
+            android:text="Artist:"
             android:textAppearance="?attr/textAppearanceHeadline6"
             android:layout_marginTop="8dp"
-            app:layout_constraintTop_toBottomOf="@id/viewPager"
+            app:layout_constraintTop_toBottomOf="@+id/viewPager"
             app:layout_constraintStart_toStartOf="parent" />
 
         <com.google.android.material.chip.ChipGroup
-            android:id="@+id/tagsContainer"
+            android:id="@+id/artist_tags_container"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_marginTop="8dp"
             app:chipSpacing="8dp"
-            app:layout_constraintTop_toBottomOf="@id/tags_label"
+            app:layout_constraintTop_toBottomOf="@+id/artist_label"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintEnd_toEndOf="parent" />
+
+        <TextView
+            android:id="@+id/copyright_label"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Copyright:"
+            android:textAppearance="?attr/textAppearanceHeadline6"
+            android:layout_marginTop="8dp"
+            app:layout_constraintTop_toBottomOf="@+id/artist_tags_container"
+            app:layout_constraintStart_toStartOf="parent" />
+
+        <com.google.android.material.chip.ChipGroup
+            android:id="@+id/copyright_tags_container"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            app:chipSpacing="8dp"
+            app:layout_constraintTop_toBottomOf="@+id/copyright_label"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintEnd_toEndOf="parent" />
+
+        <TextView
+            android:id="@+id/character_label"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Character:"
+            android:textAppearance="?attr/textAppearanceHeadline6"
+            android:layout_marginTop="8dp"
+            app:layout_constraintTop_toBottomOf="@+id/copyright_tags_container"
+            app:layout_constraintStart_toStartOf="parent" />
+
+        <com.google.android.material.chip.ChipGroup
+            android:id="@+id/character_tags_container"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            app:chipSpacing="8dp"
+            app:layout_constraintTop_toBottomOf="@+id/character_label"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintEnd_toEndOf="parent" />
+
+        <TextView
+            android:id="@+id/general_label"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Tags:"
+            android:textAppearance="?attr/textAppearanceHeadline6"
+            android:layout_marginTop="8dp"
+            app:layout_constraintTop_toBottomOf="@+id/character_tags_container"
+            app:layout_constraintStart_toStartOf="parent" />
+
+        <com.google.android.material.chip.ChipGroup
+            android:id="@+id/general_tags_container"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            app:chipSpacing="8dp"
+            app:layout_constraintTop_toBottomOf="@+id/general_label"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintEnd_toEndOf="parent" />
 

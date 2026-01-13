@@ -34,7 +34,8 @@ class ImagePagerAdapter(private val posts: List<Post>) : RecyclerView.Adapter<Im
 
         fun bind(post: Post) {
             imageView.load(post.file_url) {
-                placeholder(android.R.drawable.ic_menu_gallery)
+                // Use the preview image from MainActivity's cache as a placeholder
+                placeholderMemoryCacheKey(post.preview_url)
                 error(android.R.drawable.ic_menu_close_clear_cancel)
             }
 
@@ -42,7 +43,8 @@ class ImagePagerAdapter(private val posts: List<Post>) : RecyclerView.Adapter<Im
             imageView.setOnClickListener {
                 val context = itemView.context
                 val intent = Intent(context, PhotoViewActivity::class.java).apply {
-                    putExtra("url", post.file_url)
+                    putExtra("file_url", post.file_url)
+                    putExtra("preview_url", post.preview_url)
                 }
                 context.startActivity(intent)
             }

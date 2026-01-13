@@ -99,7 +99,7 @@ dependencies {
 
     // PhotoView for Image Zoom
     implementation(libs.photoview)
-
+    implementation("io.coil-kt:coil-gif:2.7.0")
     // Jetpack Compose (using BOM for version alignment)
     implementation(platform(libs.androidx.compose.bom))
     implementation(libs.androidx.compose.ui)
