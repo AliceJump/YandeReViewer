@@ -1,50 +1,56 @@
 # YandeReViewer
 
-A simple yet powerful Android client for browsing the [Yande.re](https://yande.re) image board, built with modern Android development practices.
+An Android application for browsing and viewing images from the Yande.re image board, built with modern Android development practices. It provides a simple, fast, and intuitive user experience for exploring a vast collection of anime-style artwork.
 
 ## ✨ Features
 
--   🖼️ **Infinite Scrolling:** Browse posts seamlessly with a paginated, two-column grid layout.
--   🔍 **Advanced Search:** Search by any combination of tags and easily filter by ratings (Safe, Questionable, Explicit) using dedicated checkboxes.
--   👆 **Multi-Select Mode:** Long-press any image to enter selection mode for powerful batch operations.
--   💾 **Batch Download:** Easily download multiple selected images at once. The downloads are handled reliably by the system's `DownloadManager`.
--   🔗 **Batch Copy Links:** Copy the direct file links of all selected images to your clipboard with a single tap.
--   📄 **Detailed View:** Tap an image to see a scrollable detail page that includes the image and all its associated tags.
--   🏷️ **Interactive Tags:** In the detail view, all tags are displayed as clickable chips. Tap any tag to instantly launch a new search for it.
--   🤏 **Immersive Viewer:** Tap the image in the detail view to open a full-screen, zoomable, and pannable viewer, allowing you to inspect every detail.
--   📥 **Quick Download:** Long-press an image in the detail view to save it directly to your device's gallery.
+- **Infinite Scrolling**: Seamlessly browse through thousands of posts using Android's Paging 3 library.
+- **Powerful Search**: Find specific images by tags.
+- **Rating Filters**: Easily filter posts by ratings (Safe, Questionable, Explicit).
+- **Immersive Detail View**: Tap an image to open a full-screen viewer with pinch-to-zoom capabilities, powered by `PhotoView`.
+- **Swipe Navigation**: Intuitively swipe left and right in the detail view to move between adjacent posts.
+- **Interactive Tags**: In the detail view, tap on tags (such as artist, character, or copyright) to immediately launch a new search for that tag.
+- **Download Manager**: Download your favorite images directly to your device's "Downloads" folder.
+- **Bulk Operations**: Long-press an image to enter selection mode, allowing you to download multiple images or copy their links at once.
+- **Efficient Caching**: 
+    - Leverages **Coil** for robust image caching (memory and disk), ensuring fast load times and reduced network usage.
+    - Utilizes **Paging 3**'s built-in caching for a smooth and responsive browsing experience.
+    - Implements a custom in-memory cache for tag metadata to optimize detail view performance.
+- **Auto Update Checker**: The app automatically checks for new versions from the project's GitHub Releases to keep you up-to-date.
+- **"Spotlight" Highlight**: When returning from the detail view to the main grid, the previously viewed image is briefly highlighted with a "spotlight" effect for better visual context.
 
-## 🛠️ Tech Stack & Libraries
+## 🛠️ Tech Stack & Architecture
 
--   **100% Kotlin**
--   **Coroutines & Flow** for asynchronous operations.
--   **AndroidX Libraries**:
-    -   `AppCompat` for base components.
-    -   `ViewModel` for UI-related data lifecycle management.
-    -   `Paging 3` for efficient, paginated data loading.
-    -   `RecyclerView` for displaying the image grid.
--   **Retrofit** for networking and consuming the Yande.re API.
--   **Coil** for fast and efficient image loading and caching.
--   **PhotoView** for the interactive, zoomable image viewer.
--   **Material Components** for modern UI elements like `Chip` and `ChipGroup`.
-
-## 🚀 Automated Releases (CI/CD)
-
-This project uses **GitHub Actions** for automated builds and releases.
-
--   **Trigger:** Pushing a new tag in the format `v*` (e.g., `v1.0.1`) to the repository.
--   **Action:** A workflow is automatically triggered to:
-    1.  Build a debug version of the application (`app-debug.apk`).
-    2.  Create a new GitHub Release based on the tag name.
-    3.  Attach the installable `app-debug.apk` file to the release assets, ready for download.
+- **Language**: **Kotlin**
+- **Core**: 
+    - **Koltin Coroutines & Flow** for asynchronous operations.
+- **Architecture**: 
+    - **Model-View-ViewModel (MVVM)** to separate UI logic from business logic.
+- **UI**: 
+    - **Android Views with XML**.
+    - **Material Components** for modern UI elements like Chips, Cards, and Buttons.
+    - **ViewPager2** for swipeable views.
+    - **RecyclerView** for displaying the main image grid efficiently.
+- **Networking**: 
+    - **Retrofit2** for type-safe REST API communication.
+    - **Gson** for JSON serialization and deserialization.
+- **Image Loading**: 
+    - **Coil** for fast, efficient image loading, caching, and GIF support.
+- **Pagination**: 
+    - **Paging 3** for loading and displaying large data sets.
+- **Image Zoom**: 
+    - **PhotoView** for implementing pinch-to-zoom functionality.
 
 ## 🚀 Getting Started
 
-1.  Clone the repository.
-2.  Open the project in the latest version of Android Studio.
+1.  **Clone the repository**:
+    ```bash
+    git clone https://github.com/AliceJump/YandeReViewer.git
+    ```
+2.  Open the project in the latest stable version of **Android Studio**.
 3.  Let Gradle sync the dependencies.
-4.  Build and run the application.
+4.  Build and run the application on an Android device or emulator.
 
-## 📸 Screenshots
+## 📄 License
 
-*(You can add screenshots of the main screen, selection mode, and detail view here to showcase the app's features.)*
+This project is licensed under the MIT License. See the `LICENSE` file for details.
