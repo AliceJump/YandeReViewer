@@ -1,5 +1,6 @@
 package com.alicejump.yandeviewer.adapter
 
+import android.app.Activity
 import android.app.DownloadManager
 import android.content.Context
 import android.content.Intent
@@ -10,6 +11,7 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.ImageView
 import android.widget.Toast
+import androidx.core.app.ActivityOptionsCompat
 import androidx.recyclerview.widget.RecyclerView
 import coil.load
 import com.alicejump.yandeviewer.PhotoViewActivity
@@ -33,10 +35,26 @@ class ImagePagerAdapter(private val posts: List<Post>) : RecyclerView.Adapter<Im
         private val imageView: ImageView = itemView.findViewById(R.id.pagerImageView)
 
         fun bind(post: Post) {
+            val transitionName = "image_transition_${post.id}"
+            imageView.transitionName = transitionName
+
+            // Temporarily disable the click listener while the high-res image is loading.
+            imageView.isClickable = false
+
             imageView.load(post.file_url) {
-                // Use the preview image from MainActivity's cache as a placeholder
                 placeholderMemoryCacheKey(post.preview_url)
                 error(android.R.drawable.ic_menu_close_clear_cancel)
+                crossfade(true)
+                listener(
+                    onSuccess = { _, _ ->
+                        // Re-enable clicks once the high-res image is successfully loaded.
+                        imageView.isClickable = true
+                    },
+                    onError = { _, _ ->
+                        // Also re-enable on error, so the user can at least interact with it.
+                        imageView.isClickable = true
+                    }
+                )
             }
 
             // Click to view full screen
@@ -45,8 +63,11 @@ class ImagePagerAdapter(private val posts: List<Post>) : RecyclerView.Adapter<Im
                 val intent = Intent(context, PhotoViewActivity::class.java).apply {
                     putExtra("file_url", post.file_url)
                     putExtra("preview_url", post.preview_url)
+                    putExtra("transition_name", transitionName)
                 }
-                context.startActivity(intent)
+
+                val options = ActivityOptionsCompat.makeSceneTransitionAnimation(context as Activity, imageView, transitionName)
+                context.startActivity(intent, options.toBundle())
             }
 
             // Long press to save

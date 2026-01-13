@@ -2,13 +2,14 @@ package com.alicejump.yandeviewer.adapter
 
 import android.view.LayoutInflater
 import android.view.ViewGroup
+import android.widget.ImageView
 import androidx.paging.PagingDataAdapter
 import androidx.recyclerview.widget.DiffUtil
 import com.alicejump.yandeviewer.R
 import com.alicejump.yandeviewer.model.Post
 
 class PostAdapter(
-    private val onPostClick: (Post, Int) -> Unit,
+    private val onPostClick: (Post, Int, ImageView) -> Unit,
     private val onSelectionChange: (Int) -> Unit
 ) : PagingDataAdapter<Post, PostVH>(diff) {
 
@@ -44,7 +45,7 @@ class PostAdapter(
                 onSelectionChange(selectedItems.size)
                 notifyItemChanged(position)
             } else {
-                onPostClick(post, position)
+                onPostClick(post, position, holder.getImageView())
             }
         }
 

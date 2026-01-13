@@ -18,4 +18,8 @@ class PostVH(view: View) : RecyclerView.ViewHolder(view) {
         checkbox.isVisible = isSelectionMode
         checkbox.isChecked = isSelected
     }
+
+    fun getImageView(): ImageView {
+        return imageView
+    }
 }

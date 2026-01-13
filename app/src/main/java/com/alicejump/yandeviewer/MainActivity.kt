@@ -6,8 +6,6 @@ import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.os.Environment
-import android.os.Handler
-import android.os.Looper
 import android.provider.MediaStore
 import android.view.Menu
 import android.view.MenuItem
@@ -21,6 +19,7 @@ import androidx.activity.viewModels
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.view.ActionMode
+import androidx.core.app.ActivityOptionsCompat
 import androidx.core.content.ContextCompat
 import androidx.core.content.FileProvider
 import androidx.core.view.ViewCompat
@@ -54,7 +53,6 @@ class MainActivity : AppCompatActivity() {
     private lateinit var ratingSCheckbox: CheckBox
     private lateinit var ratingQCheckbox: CheckBox
     private lateinit var ratingECheckbox: CheckBox
-    private lateinit var spotlightView: SpotlightView
 
     private var actionMode: ActionMode? = null
     private var downloadId: Long = 0
@@ -75,17 +73,6 @@ class MainActivity : AppCompatActivity() {
             val position = result.data?.getIntExtra("position", -1)
             if (position != -1 && position != null) {
                 recyclerView.scrollToPosition(position)
-                recyclerView.post {
-                    val viewHolder = recyclerView.findViewHolderForAdapterPosition(position)
-                    viewHolder?.itemView?.let { itemView ->
-                        spotlightView.visibility = View.VISIBLE
-                        spotlightView.setSpotlight(itemView)
-                        Handler(Looper.getMainLooper()).postDelayed({
-                            spotlightView.visibility = View.GONE
-                            spotlightView.clearSpotlight()
-                        }, 500)
-                    }
-                }
             }
         }
     }
@@ -168,7 +155,6 @@ class MainActivity : AppCompatActivity() {
         ratingSCheckbox = findViewById(R.id.rating_s_checkbox)
         ratingQCheckbox = findViewById(R.id.rating_q_checkbox)
         ratingECheckbox = findViewById(R.id.rating_e_checkbox)
-        spotlightView = findViewById(R.id.spotlightView)
 
         ViewCompat.setOnApplyWindowInsetsListener(searchBox) { view, insets ->
             val statusBarHeight = insets.getInsets(WindowInsetsCompat.Type.statusBars()).top
@@ -179,13 +165,18 @@ class MainActivity : AppCompatActivity() {
 
     private fun setupRecyclerView() {
         adapter = PostAdapter(
-            onPostClick = { post, position ->
+            onPostClick = { post, position, imageView ->
                 val intent = Intent(this, DetailActivity::class.java).apply {
                     val posts = adapter.snapshot().items.filterNotNull()
                     putParcelableArrayListExtra("posts", ArrayList(posts))
                     putExtra("position", position)
                 }
-                detailActivityLauncher.launch(intent)
+                val transitionName = "image_transition_${post.id}"
+                imageView.transitionName = transitionName
+                intent.putExtra("transition_name", transitionName)
+
+                val options = ActivityOptionsCompat.makeSceneTransitionAnimation(this, imageView, transitionName)
+                detailActivityLauncher.launch(intent, options)
             },
             onSelectionChange = { count ->
                 if (count > 0) {

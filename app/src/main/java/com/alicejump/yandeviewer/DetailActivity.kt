@@ -45,6 +45,8 @@ class DetailActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_detail)
+        // Postpone the shared element transition.
+        postponeEnterTransition()
 
         onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
             override fun handleOnBackPressed() {
@@ -52,7 +54,7 @@ class DetailActivity : AppCompatActivity() {
                     putExtra("position", viewPager.currentItem)
                 }
                 setResult(RESULT_OK, resultIntent)
-                finish()
+                finishAfterTransition()
             }
         })
 
@@ -80,6 +82,7 @@ class DetailActivity : AppCompatActivity() {
             intent.getParcelableArrayListExtra("posts")
         }
         val position = intent.getIntExtra("position", 0)
+        val transitionName = intent.getStringExtra("transition_name")
 
         if (posts == null) {
             Toast.makeText(this, R.string.detail_posts_not_found, Toast.LENGTH_SHORT).show()
@@ -89,6 +92,7 @@ class DetailActivity : AppCompatActivity() {
 
         imagePagerAdapter = ImagePagerAdapter(posts)
         viewPager.adapter = imagePagerAdapter
+        viewPager.transitionName = transitionName
 
         // This collector will automatically update the UI whenever the tag cache changes.
         lifecycleScope.launch {
@@ -109,6 +113,9 @@ class DetailActivity : AppCompatActivity() {
 
         // Manually trigger the setup for the initial item, as onPageSelected isn't called for it.
         updateUiForPosition(position, posts)
+
+        // Start the transition after the view has been laid out.
+        viewPager.post { startPostponedEnterTransition() }
     }
 
     private fun updateUiForPosition(position: Int, posts: List<Post>) {
