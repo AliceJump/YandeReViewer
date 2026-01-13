@@ -1,0 +1,54 @@
+# GitHub Actions 工作流的名称
+name: Android Release CI
+
+# 工作流的触发条件：当一个以 'v' 开头的标签 (例如 v1.0, v1.0.1) 被推送到仓库时
+on:
+  push:
+    tags:
+      - 'v*'
+
+# 定义工作流中要运行的任务
+jobs:
+  build-and-release:
+    # 指定任务运行的操作系统环境
+    runs-on: ubuntu-latest
+
+    # 定义任务中的各个步骤
+    steps:
+      # 第 1 步：检出代码
+      # 拉取你的仓库代码到工作环境中
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      # 第 2 步：设置 JDK (Java Development Kit)
+      # Android 开发需要 Java 环境，这里我们使用 JDK 11
+      - name: Set up JDK 11
+        uses: actions/setup-java@v4
+        with:
+          java-version: '11'
+          distribution: 'temurin'
+          cache: gradle
+
+      # 第 3 步：让 gradlew 文件拥有可执行权限
+      # 这是在 Linux/Mac 环境下运行 Gradle 命令前的标准操作
+      - name: Grant execute permission for gradlew
+        run: chmod +x gradlew
+
+      # 第 4 步：执行 Gradle 打包命令
+      # 这会编译你的应用并生成一个未签名的 Release APK
+      - name: Build with Gradle
+        run: ./gradlew assembleRelease
+
+      # 第 5 步：创建 Release 并上传 APK
+      # 使用一个社区提供的优秀 Action 来完成发布
+      - name: Create Release and Upload APK
+        uses: ncipollo/release-action@v1
+        with:
+          # 指定要上传的文件，路径是 Gradle 默认的输出路径
+          artifacts: "app/build/outputs/apk/release/app-release.apk"
+          # 从触发工作流的 Git 标签中自动获取版本名称
+          tag: ${{ github.ref_name }}
+          # 自动生成发布日志，包含从上一个版本到此版本的所有提交信息
+          generateReleaseNotes: true
+          # GitHub 的认证令牌，这是必需的，无需更改
+          token: ${{ secrets.GITHUB_TOKEN }}
