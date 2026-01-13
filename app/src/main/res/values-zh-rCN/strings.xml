@@ -1,0 +1,15 @@
+<resources>
+    <string name="app_name">yandeviewer</string>
+    <string name="search_hint">标签</string>
+    <string name="search_button_text">搜索</string>
+    <string name="rating_s">全年龄</string>
+    <string name="rating_q">存疑/擦边</string>
+    <string name="rating_e">限制级</string>
+    <string name="tags_label">标签:</string>
+    <string name="detail_posts_not_found">未找到帖子</string>
+    <string name="detail_artist_label">作者:</string>
+    <string name="detail_copyright_label">版权:</string>
+    <string name="detail_character_label">角色:</string>
+    <string name="detail_tags_label">标签:</string>
+    <string name="detail_source_button_text">来源</string>
+</resources>

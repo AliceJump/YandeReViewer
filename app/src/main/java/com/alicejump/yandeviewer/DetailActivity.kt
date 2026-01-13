@@ -1,10 +1,15 @@
 package com.alicejump.yandeviewer
 
 import android.content.Intent
+import android.net.Uri
 import android.os.Bundle
+import android.util.Patterns
 import android.view.MenuItem
+import android.view.View
+import android.widget.Button
 import android.widget.Toast
 import androidx.activity.OnBackPressedCallback
+import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
 import androidx.viewpager2.widget.ViewPager2
@@ -24,6 +29,7 @@ class DetailActivity : AppCompatActivity() {
     private lateinit var characterTagsContainer: ChipGroup
     private lateinit var generalTagsContainer: ChipGroup
     private lateinit var imagePagerAdapter: ImagePagerAdapter
+    private lateinit var sourceButton: Button
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -46,6 +52,7 @@ class DetailActivity : AppCompatActivity() {
         copyrightTagsContainer = findViewById(R.id.copyright_tags_container)
         characterTagsContainer = findViewById(R.id.character_tags_container)
         generalTagsContainer = findViewById(R.id.general_tags_container)
+        sourceButton = findViewById(R.id.source_button)
 
         val posts = if (android.os.Build.VERSION.SDK_INT >= 33) {
             intent.getParcelableArrayListExtra("posts", Post::class.java)
@@ -56,7 +63,7 @@ class DetailActivity : AppCompatActivity() {
         val position = intent.getIntExtra("position", 0)
 
         if (posts == null) {
-            Toast.makeText(this, "Posts not found", Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, R.string.detail_posts_not_found, Toast.LENGTH_SHORT).show()
             finish()
             return
         }
@@ -67,9 +74,7 @@ class DetailActivity : AppCompatActivity() {
         // This collector will automatically update the UI whenever the tag cache changes.
         lifecycleScope.launch {
             TagTypeCache.tagTypes.collectLatest { tagTypes ->
-                val currentPost = posts[viewPager.currentItem]
-                val currentPostTags = currentPost.tags?.split(" ")?.toSet() ?: emptySet()
-                setupTags(currentPost, currentPostTags, tagTypes)
+                updateUiForPosition(viewPager.currentItem, posts)
             }
         }
 
@@ -77,29 +82,30 @@ class DetailActivity : AppCompatActivity() {
         viewPager.registerOnPageChangeCallback(object : ViewPager2.OnPageChangeCallback() {
             override fun onPageSelected(position: Int) {
                 super.onPageSelected(position)
-                val currentPost = posts[position]
-                val tagsToFetch = currentPost.tags?.split(" ")?.toSet() ?: emptySet()
-
-                // Immediately render the page with currently cached data.
-                setupTags(currentPost, tagsToFetch, TagTypeCache.tagTypes.value)
-
-                // Then, request any missing tags with high priority.
-                if (tagsToFetch.isNotEmpty()) {
-                    TagTypeCache.prioritizeTags(tagsToFetch)
-                }
+                updateUiForPosition(position, posts)
             }
         })
 
         viewPager.setCurrentItem(position, false)
 
         // Manually trigger the setup for the initial item, as onPageSelected isn't called for it.
-        val initialPost = posts[position]
-        val initialTags = initialPost.tags?.split(" ")?.toSet() ?: emptySet()
-        setupTags(initialPost, initialTags, TagTypeCache.tagTypes.value)
-        if (initialTags.isNotEmpty()) {
-            TagTypeCache.prioritizeTags(initialTags)
+        updateUiForPosition(position, posts)
+    }
+
+    private fun updateUiForPosition(position: Int, posts: List<Post>) {
+        val currentPost = posts[position]
+        val tagsToFetch = currentPost.tags?.split(" ")?.toSet() ?: emptySet()
+
+        // Immediately render the page with currently cached data.
+        setupTags(currentPost, tagsToFetch, TagTypeCache.tagTypes.value)
+        setupSourceButton(currentPost)
+
+        // Then, request any missing tags with high priority.
+        if (tagsToFetch.isNotEmpty()) {
+            TagTypeCache.prioritizeTags(tagsToFetch)
         }
     }
+
 
     override fun onDestroy() {
         super.onDestroy()
@@ -114,6 +120,31 @@ class DetailActivity : AppCompatActivity() {
             }
         }
         return super.onOptionsItemSelected(item)
+    }
+
+    private fun setupSourceButton(currentPost: Post) {
+        val source = currentPost.source
+        if (source.isNullOrBlank()) {
+            sourceButton.visibility = View.GONE
+        } else {
+            sourceButton.visibility = View.VISIBLE
+            sourceButton.setOnClickListener {
+                if (Patterns.WEB_URL.matcher(source).matches()) {
+                    var url = source
+                    if (!url.startsWith("http://") && !url.startsWith("https://")) {
+                        url = "https://$url"
+                    }
+                    val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url))
+                    startActivity(intent)
+                } else {
+                    AlertDialog.Builder(this)
+                        .setTitle(R.string.detail_source_button_text)
+                        .setMessage(source)
+                        .setPositiveButton("OK", null)
+                        .show()
+                }
+            }
+        }
     }
 
     private fun setupTags(currentPost: Post, currentPostTags: Set<String>, allTagTypes: Map<String, Int>) {

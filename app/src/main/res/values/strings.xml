@@ -6,4 +6,10 @@
     <string name="rating_q">rating:q</string>
     <string name="rating_e">rating:e</string>
     <string name="tags_label">tags:</string>
+    <string name="detail_posts_not_found">Posts not found</string>
+    <string name="detail_artist_label">Artist:</string>
+    <string name="detail_copyright_label">Copyright:</string>
+    <string name="detail_character_label">Character:</string>
+    <string name="detail_tags_label">Tags:</string>
+    <string name="detail_source_button_text">Source</string>
 </resources>
