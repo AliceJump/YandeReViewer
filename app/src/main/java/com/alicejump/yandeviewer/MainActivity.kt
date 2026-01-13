@@ -6,13 +6,17 @@ import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.os.Environment
+import android.os.Handler
+import android.os.Looper
 import android.provider.MediaStore
 import android.view.Menu
 import android.view.MenuItem
+import android.view.View
 import android.widget.Button
 import android.widget.CheckBox
 import android.widget.EditText
 import android.widget.Toast
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
@@ -29,6 +33,7 @@ import androidx.recyclerview.widget.RecyclerView
 import com.alicejump.yandeviewer.adapter.PostAdapter
 import com.alicejump.yandeviewer.model.Post
 import com.alicejump.yandeviewer.network.GitHubRelease
+import com.alicejump.yandeviewer.view.SpotlightView
 import com.alicejump.yandeviewer.viewmodel.PostViewModel
 import com.alicejump.yandeviewer.viewmodel.UpdateCheckState
 import com.alicejump.yandeviewer.viewmodel.UpdateViewModel
@@ -49,6 +54,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var ratingSCheckbox: CheckBox
     private lateinit var ratingQCheckbox: CheckBox
     private lateinit var ratingECheckbox: CheckBox
+    private lateinit var spotlightView: SpotlightView
 
     private var actionMode: ActionMode? = null
     private var downloadId: Long = 0
@@ -60,6 +66,26 @@ class MainActivity : AppCompatActivity() {
                 val downloadManager = getSystemService(DOWNLOAD_SERVICE) as DownloadManager
                 val uri = downloadManager.getUriForDownloadedFile(id)
                 installApk(uri)
+            }
+        }
+    }
+
+    private val detailActivityLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
+        if (result.resultCode == RESULT_OK) {
+            val position = result.data?.getIntExtra("position", -1)
+            if (position != -1 && position != null) {
+                recyclerView.scrollToPosition(position)
+                recyclerView.post {
+                    val viewHolder = recyclerView.findViewHolderForAdapterPosition(position)
+                    viewHolder?.itemView?.let { itemView ->
+                        spotlightView.visibility = View.VISIBLE
+                        spotlightView.setSpotlight(itemView)
+                        Handler(Looper.getMainLooper()).postDelayed({
+                            spotlightView.visibility = View.GONE
+                            spotlightView.clearSpotlight()
+                        }, 500)
+                    }
+                }
             }
         }
     }
@@ -142,6 +168,7 @@ class MainActivity : AppCompatActivity() {
         ratingSCheckbox = findViewById(R.id.rating_s_checkbox)
         ratingQCheckbox = findViewById(R.id.rating_q_checkbox)
         ratingECheckbox = findViewById(R.id.rating_e_checkbox)
+        spotlightView = findViewById(R.id.spotlightView)
 
         ViewCompat.setOnApplyWindowInsetsListener(searchBox) { view, insets ->
             val statusBarHeight = insets.getInsets(WindowInsetsCompat.Type.statusBars()).top
@@ -158,7 +185,7 @@ class MainActivity : AppCompatActivity() {
                     putParcelableArrayListExtra("posts", ArrayList(posts))
                     putExtra("position", position)
                 }
-                startActivity(intent)
+                detailActivityLauncher.launch(intent)
             },
             onSelectionChange = { count ->
                 if (count > 0) {
