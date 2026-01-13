@@ -3,6 +3,7 @@ package com.alicejump.yandeviewer
 import android.app.Application
 import coil.ImageLoader
 import coil.ImageLoaderFactory
+import coil.memory.MemoryCache
 import com.alicejump.yandeviewer.network.ParallelImageFetcher
 import com.alicejump.yandeviewer.sync.TagSyncer
 import com.alicejump.yandeviewer.utils.CacheManager
@@ -57,6 +58,15 @@ class MyApplication : Application(), ImageLoaderFactory {
         return ImageLoader.Builder(this)
             .components {
                 add(ParallelImageFetcher.Factory())
+            }
+            .memoryCache {
+                MemoryCache.Builder(this)
+                    // Set the max size to 25% of the app's available memory.
+                    .maxSizePercent(0.25)
+                    .build()
+            }
+            .diskCache {
+                CacheManager.newDiskCache(this)
             }
             .build()
     }
