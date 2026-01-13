@@ -119,16 +119,10 @@ class DetailActivity : AppCompatActivity() {
         setupTags(currentPost, tagsToFetch, TagTypeCache.tagTypes.value)
         setupSourceButton(currentPost)
 
-        // Then, request any missing tags with high priority.
+        // Then, request any missing tags (if any).
         if (tagsToFetch.isNotEmpty()) {
-            TagTypeCache.prioritizeTags(tagsToFetch)
+            TagTypeCache.prioritizeTags(this, tagsToFetch)
         }
-    }
-
-
-    override fun onDestroy() {
-        super.onDestroy()
-        TagTypeCache.detailViewClosed()
     }
 
     override fun onOptionsItemSelected(item: MenuItem): Boolean {

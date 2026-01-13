@@ -1,88 +1,74 @@
 package com.alicejump.yandeviewer.viewmodel
 
+import android.content.Context
 import com.alicejump.yandeviewer.network.RetrofitClient
+import com.google.gson.Gson
+import com.google.gson.reflect.TypeToken
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
-import java.util.concurrent.atomic.AtomicBoolean
+import kotlinx.coroutines.withContext
+import java.io.File
 
 object TagTypeCache {
+
+    private const val TAG_DICT_FILE = "tags_name_type.json"
+
     private val _tagTypes = MutableStateFlow<Map<String, Int>>(emptyMap())
     val tagTypes = _tagTypes.asStateFlow()
 
-    private val yandeApi = RetrofitClient.api
-    private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
+    private val scope = CoroutineScope(Dispatchers.IO)
+    private val gson = Gson()
 
-    private val isDetailViewActive = AtomicBoolean(false)
-    private val backgroundQueue = mutableSetOf<String>()
-
-    /**
-     * Called from DetailActivity to fetch tags for the current post with high priority.
-     * It pauses background processing.
-     */
-    fun prioritizeTags(tags: Set<String>) {
-        isDetailViewActive.set(true)
+    fun initialize(context: Context) {
         scope.launch {
-            fetchTags(tags)
+            loadFromFile(context)
         }
     }
 
-    /**
-     * Called from DetailActivity when it's destroyed.
-     * Resumes background processing.
-     */
-    fun detailViewClosed() {
-        isDetailViewActive.set(false)
-        processBackgroundQueue() // Resume background work
-    }
-
-    /**
-     * Called from the PagingSource to add tags for low-priority background fetching.
-     */
-    fun queueTagsForBackgroundFetching(tags: Set<String>) {
-        scope.launch {
-            val currentTypes = _tagTypes.value
-            val newTags = tags.filter { !currentTypes.containsKey(it) && !backgroundQueue.contains(it) }
-            if (newTags.isNotEmpty()) {
-                backgroundQueue.addAll(newTags)
-                processBackgroundQueue()
+    private suspend fun loadFromFile(context: Context) {
+        withContext(Dispatchers.IO) {
+            val tagDictFile = File(context.filesDir, TAG_DICT_FILE)
+            if (tagDictFile.exists()) {
+                val type = object : TypeToken<Map<String, Int>>() {}.type
+                val tags: Map<String, Int> = gson.fromJson(tagDictFile.reader(), type)
+                _tagTypes.value = tags
             }
         }
     }
 
-    private fun processBackgroundQueue() {
-        // Only process if detail view is not active
-        if (isDetailViewActive.get()) return
-
-        scope.launch {
-            if (backgroundQueue.isNotEmpty()) {
-                val tagToFetch = backgroundQueue.first()
-                backgroundQueue.remove(tagToFetch)
-                fetchTags(setOf(tagToFetch))
-                // After fetching one tag, recursively call to process the next one
-                processBackgroundQueue()
-            }
-        }
-    }
-
-    private suspend fun fetchTags(tags: Set<String>) {
-        val tagsToFetch = tags.filter { !_tagTypes.value.containsKey(it) }
-
-        if (tagsToFetch.isEmpty()) return
-
-        tagsToFetch.forEach { tag ->
+    fun getTagType(context: Context, tag: String) {
+        // If tag is not in memory, fetch from network
+        if (!_tagTypes.value.containsKey(tag)) {
             scope.launch {
-                val newTagType = try {
-                    yandeApi.getTags(tag).find { it.name == tag }?.type ?: 0
-                } catch (e: Exception) {
-                    0 // Default on error
-                }
-
-                _tagTypes.value = _tagTypes.value + mapOf(tag to newTagType)
+                fetchAndSaveTag(context, tag)
             }
+        }
+    }
+
+    fun prioritizeTags(context: Context, tags: Set<String>) {
+        tags.forEach { tag ->
+            getTagType(context, tag)
+        }
+    }
+
+    private suspend fun fetchAndSaveTag(context: Context, tag: String) {
+        val newTagType = try {
+            RetrofitClient.api.getTags(tag).find { it.name == tag }?.type ?: 0
+        } catch (e: Exception) {
+            0 // Default on error
+        }
+
+        // Update in-memory cache
+        val updatedMap = _tagTypes.value + mapOf(tag to newTagType)
+        _tagTypes.value = updatedMap
+
+        // Persist to file
+        withContext(Dispatchers.IO) {
+            val tagDictFile = File(context.filesDir, TAG_DICT_FILE)
+            tagDictFile.writeText(gson.toJson(updatedMap))
         }
     }
 }

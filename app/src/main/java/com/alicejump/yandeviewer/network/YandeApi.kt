@@ -17,4 +17,11 @@ interface YandeApi {
     suspend fun getTags(
         @Query("name") name: String
     ): List<TagInfo>
+
+    @GET("tag.json")
+    suspend fun getTagsByPage(
+        @Query("page") page: Int,
+        @Query("limit") limit: Int = 2000, // As per your logic
+        @Query("order") order: String = "date"
+    ): List<TagInfo>
 }
