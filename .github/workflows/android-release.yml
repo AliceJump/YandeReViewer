@@ -35,18 +35,20 @@ jobs:
           echo "Updating appVersionName to $VERSION_NAME"
           sed -i "s/^appVersionName\s*=.*/appVersionName=$VERSION_NAME/" gradle.properties
 
-      # 4. 使用官方 Action 设置 Gradle 并执行构建 (已包含 Java 设置和高级缓存)
-      - name: Build with Gradle
-        uses: gradle/gradle-build-action@v3
-        with:
-          arguments: assembleRelease
-        env:
-          SIGNING_KEY_STORE_PATH: "$HOME/keystore.jks"
-          SIGNING_STORE_PASSWORD: ${{ secrets.SIGNING_STORE_PASSWORD }}
-          SIGNING_KEY_ALIAS: ${{ secrets.SIGNING_KEY_ALIAS }}
-          SIGNING_KEY_PASSWORD: ${{ secrets.SIGNING_KEY_PASSWORD }}
+      # 4. 设置 Gradle 环境 (使用最新的官方 Action)
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v3
 
-      # 5. 创建 Release 并上传 APK
+      # 5. 执行 Gradle 签名打包
+      - name: Build and sign Release APK
+        run: |
+          export SIGNING_KEY_STORE_PATH="$HOME/keystore.jks"
+          export SIGNING_STORE_PASSWORD="${{ secrets.SIGNING_STORE_PASSWORD }}"
+          export SIGNING_KEY_ALIAS="${{ secrets.SIGNING_KEY_ALIAS }}"
+          export SIGNING_KEY_PASSWORD="${{ secrets.SIGNING_KEY_PASSWORD }}"
+          ./gradlew assembleRelease
+
+      # 6. 创建 Release 并上传 APK
       - name: Create Release and Upload APK
         uses: ncipollo/release-action@v1
         with:
