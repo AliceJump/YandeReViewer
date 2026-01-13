@@ -1,3 +1,5 @@
+import java.io.File
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
@@ -7,6 +9,22 @@ plugins {
 android {
     namespace = "com.alicejump.yandeviewer"
     compileSdk = 36
+
+    signingConfigs {
+        create("release") {
+            val storeFilePath = System.getenv("SIGNING_KEY_STORE_PATH")
+            val storePassword = System.getenv("SIGNING_STORE_PASSWORD")
+            val keyAlias = System.getenv("SIGNING_KEY_ALIAS")
+            val keyPassword = System.getenv("SIGNING_KEY_PASSWORD")
+
+            if (storeFilePath != null && storePassword != null && keyAlias != null && keyPassword != null) {
+                storeFile = file(storeFilePath)
+                this.storePassword = storePassword
+                this.keyAlias = keyAlias
+                this.keyPassword = keyPassword
+            }
+        }
+    }
 
     defaultConfig {
         applicationId = "com.alicejump.yandeviewer"
@@ -25,6 +43,8 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
+            // Use the new signing config for release builds
+            signingConfig = signingConfigs.getByName("release")
         }
     }
     compileOptions {
