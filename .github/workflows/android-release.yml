@@ -35,20 +35,19 @@ jobs:
         run: |
           echo "${{ secrets.SIGNING_KEY_STORE_BASE64 }}" | base64 --decode > $HOME/keystore.jks
 
-      # 4. 从 Git 标签中提取版本号并更新 Gradle 文件
-      - name: Update Version Name from Tag
+      # 4. 从 Git 标签中提取版本号并更新 gradle.properties
+      - name: Update Version Name in gradle.properties
         run: |
           VERSION_NAME=${{ github.ref_name }}
           VERSION_NAME=${VERSION_NAME#v}
-          echo "Using version name: $VERSION_NAME"
-          sed -i "s/versionName = \"TAG_VERSION\"/versionName = \"$VERSION_NAME\"/" app/build.gradle.kts
+          echo "Updating appVersionName to $VERSION_NAME"
+          sed -i "s/appVersionName=.*/appVersionName=$VERSION_NAME/" gradle.properties
 
       # 5. 让 gradlew 文件拥有可执行权限
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
 
-      # 6. 执行 Gradle 签名打包 (修改点)
-      # 将环境变量设置移入 run 脚本，确保 $HOME 被正确展开
+      # 6. 执行 Gradle 签名打包
       - name: Build and sign Release APK
         run: |
           export SIGNING_KEY_STORE_PATH="$HOME/keystore.jks"

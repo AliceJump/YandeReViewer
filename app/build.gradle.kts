@@ -1,9 +1,17 @@
 import java.io.File
+import java.util.Properties
 
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
+}
+
+// Load local.properties if it exists
+val localProperties = Properties()
+val localPropertiesFile = rootProject.file("local.properties")
+if (localPropertiesFile.exists()) {
+    localProperties.load(localPropertiesFile.inputStream())
 }
 
 android {
@@ -12,10 +20,11 @@ android {
 
     signingConfigs {
         create("release") {
-            val storeFilePath = System.getenv("SIGNING_KEY_STORE_PATH")
-            val storePassword = System.getenv("SIGNING_STORE_PASSWORD")
-            val keyAlias = System.getenv("SIGNING_KEY_ALIAS")
-            val keyPassword = System.getenv("SIGNING_KEY_PASSWORD")
+            // Priority: System Env (for CI) > local.properties (for local machine)
+            val storeFilePath = System.getenv("SIGNING_KEY_STORE_PATH") ?: localProperties.getProperty("signing.keystore.path")
+            val storePassword = System.getenv("SIGNING_STORE_PASSWORD") ?: localProperties.getProperty("signing.store.password")
+            val keyAlias = System.getenv("SIGNING_KEY_ALIAS") ?: localProperties.getProperty("signing.key.alias")
+            val keyPassword = System.getenv("SIGNING_KEY_PASSWORD") ?: localProperties.getProperty("signing.key.password")
 
             if (storeFilePath != null && storePassword != null && keyAlias != null && keyPassword != null) {
                 storeFile = file(storeFilePath)
@@ -31,7 +40,8 @@ android {
         minSdk = 24
         targetSdk = 36
         versionCode = 1
-        versionName = "TAG_VERSION" // Placeholder for GitHub Actions
+        // Read version name from gradle.properties
+        versionName = project.property("appVersionName") as String
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -43,7 +53,6 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
-            // Use the new signing config for release builds
             signingConfig = signingConfigs.getByName("release")
         }
     }
