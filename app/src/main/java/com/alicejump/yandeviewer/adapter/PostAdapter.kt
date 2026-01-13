@@ -8,7 +8,7 @@ import com.alicejump.yandeviewer.R
 import com.alicejump.yandeviewer.model.Post
 
 class PostAdapter(
-    private val onPostClick: (Post) -> Unit,
+    private val onPostClick: (Post, Int) -> Unit,
     private val onSelectionChange: (Int) -> Unit
 ) : PagingDataAdapter<Post, PostVH>(diff) {
 
@@ -44,7 +44,7 @@ class PostAdapter(
                 onSelectionChange(selectedItems.size)
                 notifyItemChanged(position)
             } else {
-                onPostClick(post)
+                onPostClick(post, position)
             }
         }
 

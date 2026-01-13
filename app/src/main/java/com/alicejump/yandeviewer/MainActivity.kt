@@ -27,6 +27,7 @@ import androidx.paging.ExperimentalPagingApi
 import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.alicejump.yandeviewer.adapter.PostAdapter
+import com.alicejump.yandeviewer.model.Post
 import com.alicejump.yandeviewer.network.GitHubRelease
 import com.alicejump.yandeviewer.viewmodel.PostViewModel
 import com.alicejump.yandeviewer.viewmodel.UpdateCheckState
@@ -151,11 +152,11 @@ class MainActivity : AppCompatActivity() {
 
     private fun setupRecyclerView() {
         adapter = PostAdapter(
-            onPostClick = { post ->
+            onPostClick = { post, position ->
                 val intent = Intent(this, DetailActivity::class.java).apply {
-                    putExtra("url", post.file_url)
-                    putExtra("preview_url", post.preview_url)
-                    putExtra("tags", post.tags)
+                    val posts = adapter.snapshot().items.filterNotNull()
+                    putParcelableArrayListExtra("posts", ArrayList(posts))
+                    putExtra("position", position)
                 }
                 startActivity(intent)
             },
