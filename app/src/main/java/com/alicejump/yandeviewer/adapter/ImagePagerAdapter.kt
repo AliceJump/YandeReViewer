@@ -4,7 +4,6 @@ import android.app.Activity
 import android.app.DownloadManager
 import android.content.Context
 import android.content.Intent
-import android.net.Uri
 import android.os.Environment
 import android.view.LayoutInflater
 import android.view.View
@@ -12,6 +11,7 @@ import android.view.ViewGroup
 import android.widget.ImageView
 import android.widget.Toast
 import androidx.core.app.ActivityOptionsCompat
+import androidx.core.net.toUri
 import androidx.recyclerview.widget.RecyclerView
 import coil.load
 import com.alicejump.yandeviewer.PhotoViewActivity
@@ -74,7 +74,7 @@ class ImagePagerAdapter(private val posts: List<Post>) : RecyclerView.Adapter<Im
             imageView.setOnLongClickListener {
                 val context = itemView.context
                 val downloadManager = context.getSystemService(Context.DOWNLOAD_SERVICE) as DownloadManager
-                val request = DownloadManager.Request(Uri.parse(post.file_url))
+                val request = DownloadManager.Request(post.file_url.toUri())
                     .setTitle("Downloading Post ${post.id}")
                     .setDescription(post.tags)
                     .setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED)

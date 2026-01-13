@@ -1,5 +1,6 @@
 package com.alicejump.yandeviewer.adapter
 
+import android.annotation.SuppressLint
 import android.view.LayoutInflater
 import android.view.ViewGroup
 import android.widget.ImageView
@@ -20,11 +21,13 @@ class PostAdapter(
         return selectedItems.toList()
     }
 
+    @SuppressLint("NotifyDataSetChanged")
     fun enterSelectionMode() {
         isSelectionMode = true
         notifyDataSetChanged()
     }
 
+    @SuppressLint("NotifyDataSetChanged")
     fun exitSelectionMode() {
         isSelectionMode = false
         selectedItems.clear()

@@ -45,7 +45,7 @@ class MyApplication : Application(), ImageLoaderFactory {
                                 inputStream.copyTo(outputStream)
                             }
                         }
-                    } catch (e: Exception) {
+                    } catch (_: Exception) {
                         // File might not exist in assets, which is fine.
                         // e.g., the user doesn't want to provide a pre-set last_id.txt
                     }

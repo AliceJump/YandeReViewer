@@ -1,7 +1,6 @@
 package com.alicejump.yandeviewer
 
 import android.content.Intent
-import android.net.Uri
 import android.os.Bundle
 import android.util.Patterns
 import android.view.MenuItem
@@ -12,6 +11,7 @@ import android.widget.Toast
 import androidx.activity.OnBackPressedCallback
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.net.toUri
 import androidx.core.view.children
 import androidx.lifecycle.lifecycleScope
 import androidx.viewpager2.widget.ViewPager2
@@ -96,7 +96,7 @@ class DetailActivity : AppCompatActivity() {
 
         // This collector will automatically update the UI whenever the tag cache changes.
         lifecycleScope.launch {
-            TagTypeCache.tagTypes.collectLatest { tagTypes ->
+            TagTypeCache.tagTypes.collectLatest { _ ->
                 updateUiForPosition(viewPager.currentItem, posts)
             }
         }
@@ -120,10 +120,10 @@ class DetailActivity : AppCompatActivity() {
 
     private fun updateUiForPosition(position: Int, posts: List<Post>) {
         val currentPost = posts[position]
-        val tagsToFetch = currentPost.tags?.split(" ")?.toSet() ?: emptySet()
+        val tagsToFetch = currentPost.tags.split(" ").toSet()
 
         // Immediately render the page with currently cached data.
-        setupTags(currentPost, tagsToFetch, TagTypeCache.tagTypes.value)
+        setupTags(tagsToFetch, TagTypeCache.tagTypes.value)
         setupSourceButton(currentPost)
 
         // Then, request any missing tags (if any).
@@ -154,7 +154,7 @@ class DetailActivity : AppCompatActivity() {
                     if (!url.startsWith("http://") && !url.startsWith("https://")) {
                         url = "https://$url"
                     }
-                    val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url))
+                    val intent = Intent(Intent.ACTION_VIEW, url.toUri())
                     startActivity(intent)
                 } else {
                     AlertDialog.Builder(this)
@@ -167,7 +167,7 @@ class DetailActivity : AppCompatActivity() {
         }
     }
 
-    private fun setupTags(currentPost: Post, currentPostTags: Set<String>, allTagTypes: Map<String, Int>) {
+    private fun setupTags(currentPostTags: Set<String>, allTagTypes: Map<String, Int>) {
         artistTagsContainer.removeAllViews()
         copyrightTagsContainer.removeAllViews()
         characterTagsContainer.removeAllViews()

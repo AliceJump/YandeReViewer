@@ -57,7 +57,7 @@ object TagTypeCache {
     private suspend fun fetchAndSaveTag(context: Context, tag: String) {
         val newTagType = try {
             RetrofitClient.api.getTags(tag).find { it.name == tag }?.type ?: 0
-        } catch (e: Exception) {
+        } catch (_: Exception) {
             0 // Default on error
         }
 

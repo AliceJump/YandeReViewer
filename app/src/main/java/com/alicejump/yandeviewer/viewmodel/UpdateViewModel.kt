@@ -86,7 +86,7 @@ class UpdateViewModel : ViewModel() {
     private fun getCurrentVersion(context: Context): String {
         return try {
             context.packageManager.getPackageInfo(context.packageName, 0).versionName ?: "0.0.0"
-        } catch (e: PackageManager.NameNotFoundException) {
+        } catch (_: PackageManager.NameNotFoundException) {
             "0.0.0" // Should not happen
         }
     }
@@ -94,6 +94,6 @@ class UpdateViewModel : ViewModel() {
     private fun isNewerVersion(latest: String, current: String): Boolean {
         // This is a simplified version comparison. For production apps, a more robust
         // version comparison logic (handling more complex version strings) is recommended.
-        return latest.compareTo(current) > 0
+        return latest > current
     }
 }

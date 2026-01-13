@@ -48,7 +48,7 @@ object TagSyncer {
                 while (true) {
                     val tags = try {
                         RetrofitClient.api.getTagsByPage(page = page)
-                    } catch (e: Exception) {
+                    } catch (_: Exception) {
                         // Network error or other issues, break without marking as successful
                         break
                     }
