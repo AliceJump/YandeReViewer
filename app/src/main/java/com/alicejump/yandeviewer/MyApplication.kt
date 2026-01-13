@@ -5,6 +5,7 @@ import coil.ImageLoader
 import coil.ImageLoaderFactory
 import com.alicejump.yandeviewer.network.ParallelImageFetcher
 import com.alicejump.yandeviewer.sync.TagSyncer
+import com.alicejump.yandeviewer.utils.CacheManager
 import com.alicejump.yandeviewer.viewmodel.TagTypeCache
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -19,6 +20,9 @@ class MyApplication : Application(), ImageLoaderFactory {
 
         // On first run, copy the pre-packaged data files from assets.
         copyInitialDataFiles()
+
+        // Clear cache on start
+        CacheManager.clearCacheOnStart(this)
 
         // Initialize the tag cache from local file
         TagTypeCache.initialize(this)
