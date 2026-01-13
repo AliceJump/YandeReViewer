@@ -1,15 +1,17 @@
 package com.alicejump.yandeviewer
 
 import android.app.DownloadManager
-import android.content.*
+import android.content.BroadcastReceiver
+import android.content.ClipData
+import android.content.ClipboardManager
+import android.content.Context
+import android.content.Intent
+import android.content.IntentFilter
 import android.net.Uri
-import android.os.Build
 import android.os.Bundle
 import android.os.Environment
-import android.provider.MediaStore
 import android.view.Menu
 import android.view.MenuItem
-import android.view.View
 import android.widget.Button
 import android.widget.CheckBox
 import android.widget.EditText
@@ -21,7 +23,6 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.view.ActionMode
 import androidx.core.app.ActivityOptionsCompat
 import androidx.core.content.ContextCompat
-import androidx.core.content.FileProvider
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.updatePadding
@@ -30,15 +31,13 @@ import androidx.paging.ExperimentalPagingApi
 import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.alicejump.yandeviewer.adapter.PostAdapter
-import com.alicejump.yandeviewer.model.Post
 import com.alicejump.yandeviewer.network.GitHubRelease
-import com.alicejump.yandeviewer.view.SpotlightView
 import com.alicejump.yandeviewer.viewmodel.PostViewModel
 import com.alicejump.yandeviewer.viewmodel.UpdateCheckState
 import com.alicejump.yandeviewer.viewmodel.UpdateViewModel
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
-import java.io.File
+import androidx.core.net.toUri
 
 @OptIn(ExperimentalPagingApi::class)
 class MainActivity : AppCompatActivity() {
@@ -96,9 +95,9 @@ class MainActivity : AppCompatActivity() {
             val selectedItems = adapter.getSelectedItems()
             return when (item.itemId) {
                 R.id.action_download -> {
-                    val downloadManager = getSystemService(Context.DOWNLOAD_SERVICE) as DownloadManager
+                    val downloadManager = getSystemService(DOWNLOAD_SERVICE) as DownloadManager
                     selectedItems.forEach { post ->
-                        val request = DownloadManager.Request(Uri.parse(post.file_url))
+                        val request = DownloadManager.Request(post.file_url.toUri())
                             .setTitle("Downloading Post ${post.id}")
                             .setDescription(post.tags)
                             .setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED)
@@ -110,7 +109,7 @@ class MainActivity : AppCompatActivity() {
                     true
                 }
                 R.id.action_copy_links -> {
-                    val clipboard = getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+                    val clipboard = getSystemService(CLIPBOARD_SERVICE) as ClipboardManager
                     val links = selectedItems.joinToString("\n") { it.file_url }
                     val clip = ClipData.newPlainText("Yande.re Links", links)
                     clipboard.setPrimaryClip(clip)
@@ -167,7 +166,7 @@ class MainActivity : AppCompatActivity() {
         adapter = PostAdapter(
             onPostClick = { post, position, imageView ->
                 val intent = Intent(this, DetailActivity::class.java).apply {
-                    val posts = adapter.snapshot().items.filterNotNull()
+                    val posts = adapter.snapshot().items
                     putParcelableArrayListExtra("posts", ArrayList(posts))
                     putExtra("position", position)
                 }
@@ -245,8 +244,8 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun startDownload(url: String, version: String) {
-        val downloadManager = getSystemService(Context.DOWNLOAD_SERVICE) as DownloadManager
-        val request = DownloadManager.Request(Uri.parse(url))
+        val downloadManager = getSystemService(DOWNLOAD_SERVICE) as DownloadManager
+        val request = DownloadManager.Request(url.toUri())
             .setTitle("YandeReViewer Update")
             .setDescription("Downloading version $version")
             .setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED)
