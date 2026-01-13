@@ -1,13 +1,12 @@
 package com.alicejump.yandeviewer
 
 import android.app.DownloadManager
-import android.content.ClipData
-import android.content.ClipboardManager
-import android.content.Context
-import android.content.Intent
+import android.content.*
 import android.net.Uri
+import android.os.Build
 import android.os.Bundle
 import android.os.Environment
+import android.provider.MediaStore
 import android.view.Menu
 import android.view.MenuItem
 import android.widget.Button
@@ -15,8 +14,11 @@ import android.widget.CheckBox
 import android.widget.EditText
 import android.widget.Toast
 import androidx.activity.viewModels
+import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.view.ActionMode
+import androidx.core.content.ContextCompat
+import androidx.core.content.FileProvider
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.updatePadding
@@ -25,14 +27,19 @@ import androidx.paging.ExperimentalPagingApi
 import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.alicejump.yandeviewer.adapter.PostAdapter
+import com.alicejump.yandeviewer.network.GitHubRelease
 import com.alicejump.yandeviewer.viewmodel.PostViewModel
+import com.alicejump.yandeviewer.viewmodel.UpdateCheckState
+import com.alicejump.yandeviewer.viewmodel.UpdateViewModel
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
+import java.io.File
 
 @OptIn(ExperimentalPagingApi::class)
 class MainActivity : AppCompatActivity() {
 
-    private val vm by viewModels<PostViewModel>()
+    private val postViewModel by viewModels<PostViewModel>()
+    private val updateViewModel by viewModels<UpdateViewModel>()
     private lateinit var adapter: PostAdapter
 
     private lateinit var recyclerView: RecyclerView
@@ -43,6 +50,18 @@ class MainActivity : AppCompatActivity() {
     private lateinit var ratingECheckbox: CheckBox
 
     private var actionMode: ActionMode? = null
+    private var downloadId: Long = 0
+
+    private val onDownloadComplete: BroadcastReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context, intent: Intent) {
+            val id = intent.getLongExtra(DownloadManager.EXTRA_DOWNLOAD_ID, -1)
+            if (id == downloadId) {
+                val downloadManager = getSystemService(DOWNLOAD_SERVICE) as DownloadManager
+                val uri = downloadManager.getUriForDownloadedFile(id)
+                installApk(uri)
+            }
+        }
+    }
 
     companion object {
         const val NEW_SEARCH_TAG = "NEW_SEARCH_TAG"
@@ -99,6 +118,23 @@ class MainActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
+        ContextCompat.registerReceiver(this, onDownloadComplete, IntentFilter(DownloadManager.ACTION_DOWNLOAD_COMPLETE), ContextCompat.RECEIVER_NOT_EXPORTED)
+
+        setupViews()
+        setupRecyclerView()
+        setupSearch()
+        observeViewModels()
+
+        // Check for updates on startup
+        updateViewModel.checkForUpdate(this, "AliceJump", "YandeReViewer")
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        unregisterReceiver(onDownloadComplete)
+    }
+
+    private fun setupViews() {
         recyclerView = findViewById(R.id.recyclerView)
         searchBox = findViewById(R.id.searchBox)
         searchBtn = findViewById(R.id.searchBtn)
@@ -111,7 +147,9 @@ class MainActivity : AppCompatActivity() {
             view.updatePadding(top = statusBarHeight + view.paddingTop)
             insets
         }
+    }
 
+    private fun setupRecyclerView() {
         adapter = PostAdapter(
             onPostClick = { post ->
                 val intent = Intent(this, DetailActivity::class.java).apply {
@@ -135,18 +173,82 @@ class MainActivity : AppCompatActivity() {
 
         recyclerView.layoutManager = GridLayoutManager(this, 2)
         recyclerView.adapter = adapter
+    }
 
+    private fun setupSearch() {
+        searchBtn.setOnClickListener {
+            search()
+        }
+        handleIntent(intent)
+    }
+
+    private fun observeViewModels() {
         lifecycleScope.launch {
-            vm.posts.collectLatest {
+            postViewModel.posts.collectLatest {
                 adapter.submitData(it)
             }
         }
 
-        searchBtn.setOnClickListener {
-            search()
+        lifecycleScope.launch {
+            updateViewModel.updateState.collect { state ->
+                when (state) {
+                    is UpdateCheckState.UpdateAvailable -> showUpdateDialog(state.release)
+                    is UpdateCheckState.Error -> Toast.makeText(this@MainActivity, "Update check failed: ${state.message}", Toast.LENGTH_LONG).show()
+                    else -> { /* Idle, Checking, or NoUpdate states - do nothing */ }
+                }
+            }
+        }
+    }
+
+    private fun showUpdateDialog(release: GitHubRelease) {
+        AlertDialog.Builder(this)
+            .setTitle("New Version Available: ${release.name}")
+            .setMessage(release.body) // The release notes
+            .setPositiveButton("Update Now") { dialog, _ ->
+                val apkAsset = release.assets.firstOrNull { it.downloadUrl.endsWith(".apk") }
+                if (apkAsset != null) {
+                    startDownload(apkAsset.downloadUrl, release.tagName)
+                } else {
+                    Toast.makeText(this, "No APK found in the release.", Toast.LENGTH_SHORT).show()
+                }
+                dialog.dismiss()
+            }
+            .setNegativeButton("Ignore this version") { dialog, _ ->
+                updateViewModel.ignoreThisVersion(this, release.tagName.removePrefix("v"))
+                dialog.dismiss()
+            }
+            .setNeutralButton("Remind me in 7 days") { dialog, _ ->
+                updateViewModel.snoozeUpdate(this, 7)
+                dialog.dismiss()
+            }
+            .setCancelable(false)
+            .show()
+    }
+
+    private fun startDownload(url: String, version: String) {
+        val downloadManager = getSystemService(Context.DOWNLOAD_SERVICE) as DownloadManager
+        val request = DownloadManager.Request(Uri.parse(url))
+            .setTitle("YandeReViewer Update")
+            .setDescription("Downloading version $version")
+            .setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED)
+            .setDestinationInExternalFilesDir(this, Environment.DIRECTORY_DOWNLOADS, "YandeReViewer-$version.apk")
+
+        downloadId = downloadManager.enqueue(request)
+        Toast.makeText(this, "Download started...", Toast.LENGTH_SHORT).show()
+    }
+
+    private fun installApk(uri: Uri?) {
+        if (uri == null) {
+            Toast.makeText(this, "Failed to install update: URI is null", Toast.LENGTH_SHORT).show()
+            return
         }
 
-        handleIntent(intent)
+        val intent = Intent(Intent.ACTION_VIEW).apply {
+            setDataAndType(uri, "application/vnd.android.package-archive")
+            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        }
+        startActivity(intent)
     }
 
     override fun onNewIntent(intent: Intent) {
@@ -175,7 +277,7 @@ class MainActivity : AppCompatActivity() {
         if (ratingECheckbox.isChecked) {
             tags.append(" rating:e")
         }
-        vm.search(tags.toString().trim())
+        postViewModel.search(tags.toString().trim())
         recyclerView.scrollToPosition(0)
     }
 }
