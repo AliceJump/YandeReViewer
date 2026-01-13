@@ -8,7 +8,6 @@ data class Post(
     val id: Int,
     val preview_url: String,
     val file_url: String,
-    val author: String,
     val tags: String,
     val source: String?
 ) : Parcelable

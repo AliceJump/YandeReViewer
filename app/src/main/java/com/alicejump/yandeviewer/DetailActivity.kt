@@ -7,10 +7,12 @@ import android.util.Patterns
 import android.view.MenuItem
 import android.view.View
 import android.widget.Button
+import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.OnBackPressedCallback
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.view.children
 import androidx.lifecycle.lifecycleScope
 import androidx.viewpager2.widget.ViewPager2
 import com.alicejump.yandeviewer.adapter.ImagePagerAdapter
@@ -24,12 +26,21 @@ import kotlinx.coroutines.launch
 class DetailActivity : AppCompatActivity() {
 
     private lateinit var viewPager: ViewPager2
+    private lateinit var imagePagerAdapter: ImagePagerAdapter
+    private lateinit var sourceButton: Button
+
+    // Labels
+    private lateinit var artistLabel: TextView
+    private lateinit var copyrightLabel: TextView
+    private lateinit var characterLabel: TextView
+    private lateinit var generalLabel: TextView
+
+    // Chip Groups
     private lateinit var artistTagsContainer: ChipGroup
     private lateinit var copyrightTagsContainer: ChipGroup
     private lateinit var characterTagsContainer: ChipGroup
     private lateinit var generalTagsContainer: ChipGroup
-    private lateinit var imagePagerAdapter: ImagePagerAdapter
-    private lateinit var sourceButton: Button
+
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -48,11 +59,19 @@ class DetailActivity : AppCompatActivity() {
         supportActionBar?.setDisplayHomeAsUpEnabled(true)
 
         viewPager = findViewById(R.id.viewPager)
+        sourceButton = findViewById(R.id.source_button)
+
+        // Init Labels
+        artistLabel = findViewById(R.id.artist_label)
+        copyrightLabel = findViewById(R.id.copyright_label)
+        characterLabel = findViewById(R.id.character_label)
+        generalLabel = findViewById(R.id.general_label)
+
+        // Init ChipGroups
         artistTagsContainer = findViewById(R.id.artist_tags_container)
         copyrightTagsContainer = findViewById(R.id.copyright_tags_container)
         characterTagsContainer = findViewById(R.id.character_tags_container)
         generalTagsContainer = findViewById(R.id.general_tags_container)
-        sourceButton = findViewById(R.id.source_button)
 
         val posts = if (android.os.Build.VERSION.SDK_INT >= 33) {
             intent.getParcelableArrayListExtra("posts", Post::class.java)
@@ -153,20 +172,6 @@ class DetailActivity : AppCompatActivity() {
         characterTagsContainer.removeAllViews()
         generalTagsContainer.removeAllViews()
 
-        // Directly add the author
-        val authorChip = Chip(this).apply {
-            text = currentPost.author
-            isClickable = true
-            isFocusable = true
-        }
-        authorChip.setOnClickListener {
-            val intent = Intent(this@DetailActivity, MainActivity::class.java).apply {
-                putExtra(MainActivity.NEW_SEARCH_TAG, currentPost.author)
-            }
-            startActivity(intent)
-        }
-        artistTagsContainer.addView(authorChip)
-
         currentPostTags.forEach { tag ->
             val type = allTagTypes[tag] ?: -1 // Use -1 for tags not yet fetched
 
@@ -184,10 +189,23 @@ class DetailActivity : AppCompatActivity() {
             }
 
             when (type) {
-                3 -> copyrightTagsContainer.addView(chip)
-                4 -> characterTagsContainer.addView(chip)
+                1 -> artistTagsContainer.addView(chip) // Artist
+                3 -> copyrightTagsContainer.addView(chip) // Copyright
+                4 -> characterTagsContainer.addView(chip) // Character
                 else -> generalTagsContainer.addView(chip) // Includes general (0) and not-yet-fetched (-1)
             }
         }
+
+        // Hide label and container if they are empty
+        updateGroupVisibility(artistLabel, artistTagsContainer)
+        updateGroupVisibility(copyrightLabel, copyrightTagsContainer)
+        updateGroupVisibility(characterLabel, characterTagsContainer)
+        updateGroupVisibility(generalLabel, generalTagsContainer)
+    }
+
+    private fun updateGroupVisibility(label: TextView, group: ChipGroup) {
+        val visibility = if (group.children.count() > 0) View.VISIBLE else View.GONE
+        label.visibility = visibility
+        group.visibility = visibility
     }
 }

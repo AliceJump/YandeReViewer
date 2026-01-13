@@ -69,22 +69,20 @@ object TagTypeCache {
     }
 
     private suspend fun fetchTags(tags: Set<String>) {
-        val currentTypes = _tagTypes.value
-        val tagsToFetch = tags.filter { !currentTypes.containsKey(it) }
+        val tagsToFetch = tags.filter { !_tagTypes.value.containsKey(it) }
 
         if (tagsToFetch.isEmpty()) return
 
-        val newTagTypes = tagsToFetch.associateWith { tag ->
-            try {
-                // Find the exact match from the returned list before getting the type.
-                yandeApi.getTags(tag).find { it.name == tag }?.type ?: 0
-            } catch (e: Exception) {
-                0 // Default on error
-            }
-        }
+        tagsToFetch.forEach { tag ->
+            scope.launch {
+                val newTagType = try {
+                    yandeApi.getTags(tag).find { it.name == tag }?.type ?: 0
+                } catch (e: Exception) {
+                    0 // Default on error
+                }
 
-        if (newTagTypes.isNotEmpty()) {
-            _tagTypes.value = currentTypes + newTagTypes
+                _tagTypes.value = _tagTypes.value + mapOf(tag to newTagType)
+            }
         }
     }
 }
