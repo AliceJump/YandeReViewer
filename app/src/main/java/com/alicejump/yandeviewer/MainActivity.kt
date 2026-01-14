@@ -110,7 +110,7 @@ class MainActivity : AppCompatActivity() {
                 }
                 R.id.action_copy_links -> {
                     val clipboard = getSystemService(CLIPBOARD_SERVICE) as ClipboardManager
-                    val links = selectedItems.joinToString("\n") { it.file_url }
+                    val links = selectedItems.joinToString("") { it.file_url }
                     val clip = ClipData.newPlainText("Yande.re Links", links)
                     clipboard.setPrimaryClip(clip)
                     Toast.makeText(this@MainActivity, "Links copied to clipboard", Toast.LENGTH_SHORT).show()
@@ -165,10 +165,15 @@ class MainActivity : AppCompatActivity() {
     private fun setupRecyclerView() {
         adapter = PostAdapter(
             onPostClick = { post, position, imageView ->
+                val layoutManager = recyclerView.layoutManager as GridLayoutManager
+                val firstVisible = layoutManager.findFirstVisibleItemPosition()
+                val lastVisible = layoutManager.findLastVisibleItemPosition()
                 val intent = Intent(this, DetailActivity::class.java).apply {
                     val posts = adapter.snapshot().items
                     putParcelableArrayListExtra("posts", ArrayList(posts))
                     putExtra("position", position)
+                    putExtra("first_visible_position", firstVisible)
+                    putExtra("last_visible_position", lastVisible)
                 }
                 val transitionName = "image_transition_${post.id}"
                 imageView.transitionName = transitionName

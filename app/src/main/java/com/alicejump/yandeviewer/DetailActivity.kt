@@ -1,11 +1,16 @@
 package com.alicejump.yandeviewer
 
 import android.content.Intent
+import android.graphics.Bitmap
+import android.graphics.Canvas
 import android.os.Bundle
 import android.util.Patterns
 import android.view.MenuItem
 import android.view.View
+import android.view.ViewGroup
 import android.widget.Button
+import android.widget.FrameLayout
+import android.widget.ImageView
 import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.OnBackPressedCallback
@@ -14,6 +19,7 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.core.net.toUri
 import androidx.core.view.children
 import androidx.lifecycle.lifecycleScope
+import androidx.recyclerview.widget.RecyclerView
 import androidx.viewpager2.widget.ViewPager2
 import com.alicejump.yandeviewer.adapter.ImagePagerAdapter
 import com.alicejump.yandeviewer.model.Post
@@ -22,6 +28,7 @@ import com.google.android.material.chip.Chip
 import com.google.android.material.chip.ChipGroup
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
+import androidx.core.graphics.createBitmap
 
 class DetailActivity : AppCompatActivity() {
 
@@ -41,6 +48,40 @@ class DetailActivity : AppCompatActivity() {
     private lateinit var characterTagsContainer: ChipGroup
     private lateinit var generalTagsContainer: ChipGroup
 
+    private var firstVisiblePosition: Int = -1
+    private var lastVisiblePosition: Int = -1
+
+    private fun createSnapshotView(source: View): View {
+        val bitmap = createBitmap(source.width, source.height)
+        val canvas = Canvas(bitmap)
+        source.draw(canvas)
+
+        return ImageView(this).apply {
+            setImageBitmap(bitmap)
+            scaleType = ImageView.ScaleType.FIT_CENTER
+        }
+    }
+
+    private fun addToOverlay(source: View): View {
+        val decorView = window.decorView as ViewGroup
+        val snapshot = createSnapshotView(source)
+
+        val location = IntArray(2)
+        source.getLocationOnScreen(location)
+
+        val params = FrameLayout.LayoutParams(
+            source.width,
+            source.height
+        ).apply {
+            leftMargin = location[0]
+            topMargin = location[1]
+        }
+
+        decorView.addView(snapshot, params)
+        return snapshot
+    }
+
+
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -50,11 +91,85 @@ class DetailActivity : AppCompatActivity() {
 
         onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
             override fun handleOnBackPressed() {
+                val currentPosition = viewPager.currentItem
+                val isOnScreen = currentPosition in firstVisiblePosition..lastVisiblePosition
+
                 val resultIntent = Intent().apply {
-                    putExtra("position", viewPager.currentItem)
+                    putExtra("position", currentPosition)
                 }
                 setResult(RESULT_OK, resultIntent)
-                finishAfterTransition()
+
+                if (isOnScreen) {
+                    finishAfterTransition()
+                    return
+                }
+
+                // ===== 非屏幕内，自定义动画 =====
+                val recyclerView = viewPager.getChildAt(0) as? RecyclerView
+                val viewHolder =
+                    recyclerView?.findViewHolderForAdapterPosition(currentPosition)
+                            as? ImagePagerAdapter.ImageViewHolder
+
+                val imageView = viewHolder
+                    ?.itemView
+                    ?.findViewById<View>(R.id.pagerImageView)
+
+                if (imageView == null) {
+                    finish()
+                    return
+                }
+
+                val isAbove = currentPosition < firstVisiblePosition
+                val isLeft = currentPosition % 2 == 0
+
+                val screenWidth = resources.displayMetrics.widthPixels.toFloat()
+                val screenHeight = resources.displayMetrics.heightPixels.toFloat()
+
+                if (isAbove) {
+                    // —— 上方：缩向左上 / 右上（基于 View 自身）——
+                    imageView.pivotX = if (isLeft) 0f else imageView.width.toFloat()
+                    imageView.pivotY = 0f
+
+                    imageView.animate()
+                        .scaleX(0f)
+                        .scaleY(0f)
+                        .alpha(0f)
+                        .setDuration(300)
+                        .withEndAction {
+                            finish()
+                            overridePendingTransition(0, 0)
+                        }
+                        .start()
+
+                } else {
+                    // —— 下方：使用屏幕级 Overlay 飞向左下 / 右下 ——
+
+                    val decorView = window.decorView as ViewGroup
+                    val snapshot = addToOverlay(imageView)
+
+                    imageView.alpha = 0f   // 原图隐藏
+
+                    val screenWidth = resources.displayMetrics.widthPixels.toFloat()
+                    val screenHeight = resources.displayMetrics.heightPixels.toFloat()
+
+                    val targetX = if (isLeft) -screenWidth else screenWidth
+                    val targetY = screenHeight
+
+                    snapshot.animate()
+                        .translationX(targetX)
+                        .translationY(targetY)
+                        .scaleX(0f)
+                        .scaleY(0f)
+                        .alpha(0f)
+                        .setDuration(300)
+                        .withEndAction {
+                            decorView.removeView(snapshot)
+                            finish()
+                            overridePendingTransition(0, 0)
+                        }
+                        .start()
+                }
+
             }
         })
 
@@ -82,6 +197,8 @@ class DetailActivity : AppCompatActivity() {
             intent.getParcelableArrayListExtra("posts")
         }
         val position = intent.getIntExtra("position", 0)
+        firstVisiblePosition = intent.getIntExtra("first_visible_position", -1)
+        lastVisiblePosition = intent.getIntExtra("last_visible_position", -1)
         val transitionName = intent.getStringExtra("transition_name")
 
         if (posts == null) {

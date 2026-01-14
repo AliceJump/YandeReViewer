@@ -42,6 +42,7 @@ class ImagePagerAdapter(private val posts: List<Post>) : RecyclerView.Adapter<Im
             imageView.isClickable = false
 
             imageView.load(post.file_url) {
+                allowHardware(false)
                 placeholderMemoryCacheKey(post.preview_url)
                 error(android.R.drawable.ic_menu_close_clear_cancel)
                 crossfade(true)
