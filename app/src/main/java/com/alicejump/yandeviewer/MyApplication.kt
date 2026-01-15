@@ -8,6 +8,7 @@ import com.alicejump.yandeviewer.network.ParallelImageFetcher
 import com.alicejump.yandeviewer.sync.TagSyncer
 import com.alicejump.yandeviewer.utils.CacheManager
 import com.alicejump.yandeviewer.viewmodel.TagTypeCache
+import com.google.android.material.color.DynamicColors
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -18,6 +19,8 @@ class MyApplication : Application(), ImageLoaderFactory {
 
     override fun onCreate() {
         super.onCreate()
+        // Apply dynamic colors to all activities if available.
+        DynamicColors.applyToActivitiesIfAvailable(this)
 
         // On first run, copy the pre-packaged data files from assets.
         copyInitialDataFiles()

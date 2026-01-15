@@ -1,7 +1,6 @@
 package com.alicejump.yandeviewer
 
 import android.content.Intent
-import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.os.Bundle
 import android.util.Patterns
@@ -16,6 +15,7 @@ import android.widget.Toast
 import androidx.activity.OnBackPressedCallback
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.graphics.createBitmap
 import androidx.core.net.toUri
 import androidx.core.view.children
 import androidx.lifecycle.lifecycleScope
@@ -28,7 +28,6 @@ import com.google.android.material.chip.Chip
 import com.google.android.material.chip.ChipGroup
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
-import androidx.core.graphics.createBitmap
 
 class DetailActivity : AppCompatActivity() {
 
@@ -122,14 +121,14 @@ class DetailActivity : AppCompatActivity() {
                 val isAbove = currentPosition < firstVisiblePosition
                 val isLeft = currentPosition % 2 == 0
 
-                val screenWidth = resources.displayMetrics.widthPixels.toFloat()
-                val screenHeight = resources.displayMetrics.heightPixels.toFloat()
+                resources.displayMetrics.widthPixels.toFloat()
+                resources.displayMetrics.heightPixels.toFloat()
 
                 if (isAbove) {
                     // —— 上方：缩向左上 / 右上（基于 View 自身）——
                     imageView.pivotX = if (isLeft) 0f else imageView.width.toFloat()
                     imageView.pivotY = 0f
-
+                    @Suppress("DEPRECATION")
                     imageView.animate()
                         .scaleX(0f)
                         .scaleY(0f)
@@ -153,11 +152,10 @@ class DetailActivity : AppCompatActivity() {
                     val screenHeight = resources.displayMetrics.heightPixels.toFloat()
 
                     val targetX = if (isLeft) -screenWidth else screenWidth
-                    val targetY = screenHeight
-
+                    @Suppress("DEPRECATION")
                     snapshot.animate()
                         .translationX(targetX)
-                        .translationY(targetY)
+                        .translationY(screenHeight)
                         .scaleX(0f)
                         .scaleY(0f)
                         .alpha(0f)

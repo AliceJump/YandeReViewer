@@ -9,5 +9,7 @@ data class Post(
     val preview_url: String,
     val file_url: String,
     val tags: String,
-    val source: String?
+    val source: String?,
+    val width: Int,
+    val height: Int
 ) : Parcelable

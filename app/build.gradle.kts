@@ -77,7 +77,7 @@ dependencies {
     // Core & UI
     implementation("androidx.core:core-ktx:1.12.0")
     implementation("androidx.appcompat:appcompat:1.7.1")
-    implementation("com.google.android.material:material:1.12.0")
+    implementation("com.google.android.material:material:1.13.0-alpha02")
     implementation("androidx.recyclerview:recyclerview:1.3.1")
     implementation(libs.androidx.activity.compose)
 

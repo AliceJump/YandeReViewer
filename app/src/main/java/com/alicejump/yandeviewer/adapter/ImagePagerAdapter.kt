@@ -17,12 +17,14 @@ import androidx.core.content.FileProvider
 import androidx.core.net.toUri
 import androidx.core.view.ViewCompat
 import androidx.recyclerview.widget.RecyclerView
+import coil.annotation.ExperimentalCoilApi
 import coil.imageLoader
 import coil.load
 import com.alicejump.yandeviewer.PhotoViewActivity
 import com.alicejump.yandeviewer.R
 import com.alicejump.yandeviewer.model.Post
 import java.io.File
+import kotlin.math.abs
 
 class ImagePagerAdapter(private val posts: List<Post>) : RecyclerView.Adapter<ImagePagerAdapter.ImageViewHolder>() {
 
@@ -52,11 +54,12 @@ class ImagePagerAdapter(private val posts: List<Post>) : RecyclerView.Adapter<Im
                 crossfade(true)
             }
 
-            // Combined listener for click, long-press-download, and long-press-drag
             val handler = Handler(Looper.getMainLooper())
             var isDragging = false
             var downTime = 0L
-            val DRAG_TRIGGER_DELAY = 1000L // 1 second to trigger drag
+            var startX = 0f
+            var startY = 0f
+            val dragTriggerDelayMillis = 1000L // 1 second
 
             val dragRunnable = Runnable {
                 isDragging = true
@@ -67,9 +70,11 @@ class ImagePagerAdapter(private val posts: List<Post>) : RecyclerView.Adapter<Im
                 when (event.action) {
                     MotionEvent.ACTION_DOWN -> {
                         downTime = System.currentTimeMillis()
+                        startX = event.x
+                        startY = event.y
                         isDragging = false
-                        handler.postDelayed(dragRunnable, DRAG_TRIGGER_DELAY)
-                        true // Crucial to receive further events
+                        handler.postDelayed(dragRunnable, dragTriggerDelayMillis)
+                        true // Must be true to receive subsequent events
                     }
 
                     MotionEvent.ACTION_UP -> {
@@ -91,22 +96,22 @@ class ImagePagerAdapter(private val posts: List<Post>) : RecyclerView.Adapter<Im
                                 downloadImage(view.context, post)
                             }
                         }
+                        isDragging = false // IMPORTANT: Reset state
                         true
                     }
 
-                    MotionEvent.ACTION_CANCEL,
                     MotionEvent.ACTION_MOVE -> {
-                        // Cancel everything if finger moves out of bounds or event is cancelled
-                        if (event.action == MotionEvent.ACTION_MOVE){
-                            val slop = ViewConfiguration.get(view.context).scaledTouchSlop
-                            if(event.x > view.width + slop || event.x < -slop || event.y > view.height + slop || event.y < -slop){
-                                handler.removeCallbacks(dragRunnable)
-                            }
+                        val slop = ViewConfiguration.get(view.context).scaledTouchSlop
+                        if (abs(event.x - startX) > slop || abs(event.y - startY) > slop) {
+                            handler.removeCallbacks(dragRunnable)
                         }
-                        else{
-                             handler.removeCallbacks(dragRunnable)
-                        }
-                        false // Return false to not interfere with ViewPager2 scrolling on small moves
+                        false // Allow ViewPager2 to scroll
+                    }
+
+                    MotionEvent.ACTION_CANCEL -> {
+                        handler.removeCallbacks(dragRunnable)
+                        isDragging = false // IMPORTANT: Reset state
+                        true
                     }
 
                     else -> false
@@ -125,6 +130,7 @@ class ImagePagerAdapter(private val posts: List<Post>) : RecyclerView.Adapter<Im
             Toast.makeText(context, "Started downloading...", Toast.LENGTH_SHORT).show()
         }
 
+        @OptIn(ExperimentalCoilApi::class)
         private fun startDrag(view: View, post: Post) {
             view.performHapticFeedback(HapticFeedbackConstants.LONG_PRESS)
             val context = view.context

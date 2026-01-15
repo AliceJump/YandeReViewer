@@ -3,6 +3,7 @@ package com.alicejump.yandeviewer.adapter
 import android.view.View
 import android.widget.CheckBox
 import android.widget.ImageView
+import androidx.constraintlayout.widget.ConstraintLayout
 import androidx.core.view.isVisible
 import androidx.recyclerview.widget.RecyclerView
 import coil.load
@@ -14,6 +15,11 @@ class PostVH(view: View) : RecyclerView.ViewHolder(view) {
     private val checkbox: CheckBox = view.findViewById(R.id.checkbox)
 
     fun bind(post: Post, isSelectionMode: Boolean, isSelected: Boolean) {
+        // Set the aspect ratio to prevent image jumping
+        val layoutParams = imageView.layoutParams as ConstraintLayout.LayoutParams
+        layoutParams.dimensionRatio = "${post.width}:${post.height}"
+        imageView.layoutParams = layoutParams
+
         imageView.load(post.preview_url) {
             allowHardware(false)
         }
