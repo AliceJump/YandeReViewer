@@ -1,15 +1,20 @@
 package com.alicejump.yandeviewer.adapter
 
+import android.annotation.SuppressLint
 import android.app.Activity
+import android.app.DownloadManager
 import android.content.ClipData
+import android.content.Context
 import android.content.Intent
-import android.view.LayoutInflater
-import android.view.View
-import android.view.ViewGroup
+import android.os.Environment
+import android.os.Handler
+import android.os.Looper
+import android.view.*
 import android.widget.ImageView
 import android.widget.Toast
 import androidx.core.app.ActivityOptionsCompat
 import androidx.core.content.FileProvider
+import androidx.core.net.toUri
 import androidx.core.view.ViewCompat
 import androidx.recyclerview.widget.RecyclerView
 import coil.imageLoader
@@ -35,75 +40,116 @@ class ImagePagerAdapter(private val posts: List<Post>) : RecyclerView.Adapter<Im
     class ImageViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
         private val imageView: ImageView = itemView.findViewById(R.id.pagerImageView)
 
+        @SuppressLint("ClickableViewAccessibility")
         fun bind(post: Post) {
             val transitionName = "image_transition_${post.id}"
             imageView.transitionName = transitionName
-
-            // Temporarily disable the click listener while the high-res image is loading.
-            imageView.isClickable = false
 
             imageView.load(post.file_url) {
                 allowHardware(false)
                 placeholderMemoryCacheKey(post.preview_url)
                 error(android.R.drawable.ic_menu_close_clear_cancel)
                 crossfade(true)
-                listener(
-                    onSuccess = { _, _ ->
-                        // Re-enable clicks once the high-res image is successfully loaded.
-                        imageView.isClickable = true
-                    },
-                    onError = { _, _ ->
-                        // Also re-enable on error, so the user can at least interact with it.
-                        imageView.isClickable = true
+            }
+
+            // Combined listener for click, long-press-download, and long-press-drag
+            val handler = Handler(Looper.getMainLooper())
+            var isDragging = false
+            var downTime = 0L
+            val DRAG_TRIGGER_DELAY = 1000L // 1 second to trigger drag
+
+            val dragRunnable = Runnable {
+                isDragging = true
+                startDrag(imageView, post)
+            }
+
+            imageView.setOnTouchListener { view, event ->
+                when (event.action) {
+                    MotionEvent.ACTION_DOWN -> {
+                        downTime = System.currentTimeMillis()
+                        isDragging = false
+                        handler.postDelayed(dragRunnable, DRAG_TRIGGER_DELAY)
+                        true // Crucial to receive further events
                     }
-                )
-            }
 
-            // Click to view full screen
-            imageView.setOnClickListener {
-                val context = itemView.context
-                val intent = Intent(context, PhotoViewActivity::class.java).apply {
-                    putExtra("file_url", post.file_url)
-                    putExtra("preview_url", post.preview_url)
-                    putExtra("transition_name", transitionName)
+                    MotionEvent.ACTION_UP -> {
+                        handler.removeCallbacks(dragRunnable)
+                        if (!isDragging) {
+                            val pressDuration = System.currentTimeMillis() - downTime
+                            if (pressDuration < ViewConfiguration.getTapTimeout()) {
+                                // CLICK
+                                val context = itemView.context
+                                val intent = Intent(context, PhotoViewActivity::class.java).apply {
+                                    putExtra("file_url", post.file_url)
+                                    putExtra("preview_url", post.preview_url)
+                                    putExtra("transition_name", transitionName)
+                                }
+                                val options = ActivityOptionsCompat.makeSceneTransitionAnimation(context as Activity, imageView, transitionName)
+                                context.startActivity(intent, options.toBundle())
+                            } else {
+                                // DOWNLOAD (Short Long-Press)
+                                downloadImage(view.context, post)
+                            }
+                        }
+                        true
+                    }
+
+                    MotionEvent.ACTION_CANCEL,
+                    MotionEvent.ACTION_MOVE -> {
+                        // Cancel everything if finger moves out of bounds or event is cancelled
+                        if (event.action == MotionEvent.ACTION_MOVE){
+                            val slop = ViewConfiguration.get(view.context).scaledTouchSlop
+                            if(event.x > view.width + slop || event.x < -slop || event.y > view.height + slop || event.y < -slop){
+                                handler.removeCallbacks(dragRunnable)
+                            }
+                        }
+                        else{
+                             handler.removeCallbacks(dragRunnable)
+                        }
+                        false // Return false to not interfere with ViewPager2 scrolling on small moves
+                    }
+
+                    else -> false
                 }
+            }
+        }
 
-                val options = ActivityOptionsCompat.makeSceneTransitionAnimation(context as Activity, imageView, transitionName)
-                context.startActivity(intent, options.toBundle())
+        private fun downloadImage(context: Context, post: Post) {
+            val downloadManager = context.getSystemService(Context.DOWNLOAD_SERVICE) as DownloadManager
+            val request = DownloadManager.Request(post.file_url.toUri())
+                .setTitle("Downloading Post ${post.id}")
+                .setDescription(post.tags)
+                .setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED)
+                .setDestinationInExternalPublicDir(Environment.DIRECTORY_DOWNLOADS, "yande.re_${post.id}.jpg")
+            downloadManager.enqueue(request)
+            Toast.makeText(context, "Started downloading...", Toast.LENGTH_SHORT).show()
+        }
+
+        private fun startDrag(view: View, post: Post) {
+            view.performHapticFeedback(HapticFeedbackConstants.LONG_PRESS)
+            val context = view.context
+            val imageLoader = context.imageLoader
+            val diskCache = imageLoader.diskCache
+
+            val snapshot = diskCache?.openSnapshot(post.file_url) ?: run {
+                Toast.makeText(context, "Image not cached yet, please wait.", Toast.LENGTH_SHORT).show()
+                return
             }
 
-            // Long press to drag
-            imageView.setOnLongClickListener { view ->
-                val context = view.context
-                val imageLoader = context.imageLoader
-                val diskCache = imageLoader.diskCache
+            val cacheFile = snapshot.data.toFile()
+            val tempFile = File(context.cacheDir, "dragged_image.jpg")
+            cacheFile.copyTo(tempFile, true)
+            snapshot.close()
 
-                val snapshot = diskCache?.openSnapshot(post.file_url)
-                if (snapshot == null) {
-                    Toast.makeText(context, "Image not cached yet, please wait for it to load.", Toast.LENGTH_SHORT).show()
-                    return@setOnLongClickListener true
-                }
+            val uri = FileProvider.getUriForFile(context, "${context.packageName}.provider", tempFile)
 
-                // Copy the cached file to a temporary file with a proper extension
-                val cacheFile = snapshot.data.toFile()
-                val tempFile = File(context.cacheDir, "dragged_image.jpg")
-                cacheFile.copyTo(tempFile, true)
-                snapshot.close()
+            val mimeTypes = arrayOf("image/jpeg")
+            val dragItem = ClipData.Item(uri)
+            val clipData = ClipData("Image from YandeReViewer", mimeTypes, dragItem)
 
-                val uri = FileProvider.getUriForFile(context, "${context.packageName}.provider", tempFile)
-
-                // The item to be dragged, with an explicit MIME type.
-                val mimeTypes = arrayOf("image/jpeg")
-                val dragItem = ClipData.Item(uri)
-                val clipData = ClipData("Image from YandeReViewer", mimeTypes, dragItem)
-
-                val dragShadowBuilder = View.DragShadowBuilder(view)
-
-                // Add flags to grant URI permissions across apps
-                val dragFlags = View.DRAG_FLAG_GLOBAL or View.DRAG_FLAG_GLOBAL_URI_READ
-                ViewCompat.startDragAndDrop(view, clipData, dragShadowBuilder, null, dragFlags)
-                true
-            }
+            val dragShadowBuilder = View.DragShadowBuilder(view)
+            val dragFlags = View.DRAG_FLAG_GLOBAL or View.DRAG_FLAG_GLOBAL_URI_READ
+            ViewCompat.startDragAndDrop(view, clipData, dragShadowBuilder, null, dragFlags)
         }
     }
 }
