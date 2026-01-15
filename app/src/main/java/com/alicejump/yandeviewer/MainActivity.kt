@@ -7,15 +7,15 @@ import android.content.ClipboardManager
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
+import android.content.res.ColorStateList
+import android.graphics.Color
 import android.net.Uri
 import android.os.Bundle
 import android.os.Environment
 import android.text.Editable
 import android.text.TextWatcher
-import android.view.KeyEvent
 import android.view.Menu
 import android.view.MenuItem
-import android.view.inputmethod.EditorInfo
 import android.view.inputmethod.InputMethodManager
 import android.widget.ArrayAdapter
 import android.widget.AutoCompleteTextView
@@ -29,9 +29,8 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.view.ActionMode
 import androidx.core.app.ActivityOptionsCompat
 import androidx.core.content.ContextCompat
-import androidx.core.view.ViewCompat
-import androidx.core.view.WindowInsetsCompat
-import androidx.core.view.updatePadding
+import androidx.core.graphics.toColorInt
+import androidx.core.net.toUri
 import androidx.lifecycle.lifecycleScope
 import androidx.paging.ExperimentalPagingApi
 import androidx.recyclerview.widget.RecyclerView
@@ -43,12 +42,17 @@ import com.alicejump.yandeviewer.viewmodel.PostViewModel
 import com.alicejump.yandeviewer.viewmodel.TagTypeCache
 import com.alicejump.yandeviewer.viewmodel.UpdateCheckState
 import com.alicejump.yandeviewer.viewmodel.UpdateViewModel
+import com.google.android.material.chip.Chip
+import com.google.android.material.chip.ChipGroup
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
-import androidx.core.net.toUri
 
 @OptIn(ExperimentalPagingApi::class)
 class MainActivity : AppCompatActivity() {
+    private lateinit var tagChipGroup: ChipGroup
+
+    // 真正的标签数据源
+    private val selectedTags = linkedSetOf<String>()
 
     private val postViewModel by viewModels<PostViewModel>()
     private val updateViewModel by viewModels<UpdateViewModel>()
@@ -67,7 +71,7 @@ class MainActivity : AppCompatActivity() {
 
     private var actionMode: ActionMode? = null
     private var downloadId: Long = 0
-
+    private var tagTypeMap: Map<String, Int> = emptyMap()
     private val onDownloadComplete: BroadcastReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context, intent: Intent) {
             val id = intent.getLongExtra(DownloadManager.EXTRA_DOWNLOAD_ID, -1)
@@ -146,6 +150,7 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
@@ -181,6 +186,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun setupViews() {
+
         recyclerView = findViewById(R.id.recyclerView)
         searchBox = findViewById(R.id.searchBox)
         searchBtn = findViewById(R.id.searchBtn)
@@ -189,16 +195,54 @@ class MainActivity : AppCompatActivity() {
         ratingECheckbox = findViewById(R.id.rating_e_checkbox)
         swipeRefreshLayout = findViewById(R.id.swipeRefreshLayout)
 
-        // 状态栏高度 padding
-        ViewCompat.setOnApplyWindowInsetsListener(searchBox) { view, insets ->
-            val statusBarHeight = insets.getInsets(WindowInsetsCompat.Type.statusBars()).top
-            view.updatePadding(top = statusBarHeight)
-            insets
-        }
+        tagChipGroup = findViewById(R.id.tagChipGroup)
+
 
         swipeRefreshLayout.setOnRefreshListener {
-            postAdapter.refresh() // Paging3 触发刷新
+            performSearch()
         }
+    }
+    private fun setupSearch() {
+
+        searchBtn.setOnClickListener { performSearch() }
+
+        // ===== 补全 =====
+        tagCompletionAdapter =
+            ArrayAdapter(this, android.R.layout.simple_dropdown_item_1line, mutableListOf())
+
+        searchBox.setAdapter(tagCompletionAdapter)
+        searchBox.threshold = 1
+
+        // 输入过滤
+        searchBox.addTextChangedListener(object : TextWatcher {
+            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
+            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
+
+            override fun afterTextChanged(s: Editable?) {
+                val word = s?.toString()?.trim() ?: return
+
+                tagCompletionAdapter.clear()
+                tagCompletionAdapter.addAll(allAvailableTags)
+                tagCompletionAdapter.filter.filter(word)
+
+                if (word.isNotEmpty()) {
+                    searchBox.showDropDown()
+                }
+            }
+        })
+
+        // 选中补全
+        searchBox.setOnItemClickListener { parent, _, position, _ ->
+            val tag = parent.getItemAtPosition(position) as String
+
+            addTag(tag)
+
+            searchBox.setText("")
+
+            performSearch()
+        }
+
+        handleIntent(intent)
     }
 
     private fun setupRecyclerView() {
@@ -243,59 +287,72 @@ class MainActivity : AppCompatActivity() {
         recyclerView.adapter = postAdapter
     }
 
-    private fun setupSearch() {
-        searchBtn.setOnClickListener { performSearch() }
+    private fun addTag(tag: String) {
+        if (selectedTags.contains(tag)) return
 
-        searchBox.setOnEditorActionListener { _, actionId, event ->
-            if (actionId == EditorInfo.IME_ACTION_SEARCH || (event != null && event.action == KeyEvent.ACTION_DOWN && event.keyCode == KeyEvent.KEYCODE_ENTER)) {
-                performSearch()
-                true
-            } else false
-        }
+        selectedTags.add(tag)
+        val chip = Chip(this).apply {
+            text = tag
+            isCloseIconVisible = true
 
-        tagCompletionAdapter =
-            ArrayAdapter(this, android.R.layout.simple_dropdown_item_1line, mutableListOf<String>())
-        searchBox.setAdapter(tagCompletionAdapter)
+            // ===== 重点：颜色逻辑 =====
 
-        // 1. 初始化 Adapter
-        tagCompletionAdapter =
-            ArrayAdapter(this, android.R.layout.simple_dropdown_item_1line, mutableListOf())
-        searchBox.setAdapter(tagCompletionAdapter)
-        searchBox.threshold = 1 // 只要输入一个字符就开始过滤
 
-        // 2. TextWatcher
-        searchBox.addTextChangedListener(object : TextWatcher {
-            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
-            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
+            val typeNum = TagTypeCache.tagTypes.value[tag]   // ← 直接取当前值
 
-            override fun afterTextChanged(s: Editable?) {
-                val text = s?.toString() ?: return
-                val cursorPos = searchBox.selectionStart.coerceAtLeast(0)
-                val lastSpaceIndex = text.lastIndexOf(' ', cursorPos - 1)
-                val currentWord = if (lastSpaceIndex < 0) text.take(cursorPos)
-                else text.substring(lastSpaceIndex + 1, cursorPos)
+            val color = when {
+                // rating 特殊规则
+                tag.startsWith("rating:s") -> "#4CAF50".toColorInt()
+                tag.startsWith("rating:q") -> "#FFC107".toColorInt()
+                tag.startsWith("rating:e") -> "#F44336".toColorInt()
 
-                // 更新 adapter 数据
-                tagCompletionAdapter.clear()
-                tagCompletionAdapter.addAll(allAvailableTags)
-                tagCompletionAdapter.notifyDataSetChanged()
+                // typenum 规则
+                typeNum == 1 -> "#F06292".toColorInt() // artist
+                typeNum == 3 -> "#BA68C8".toColorInt() // copyright
+                typeNum == 4 -> "#7986CB".toColorInt() // character
+                typeNum == 5 -> "#4DB6AC".toColorInt() // circle
+                typeNum == 0 -> "#90A4AE".toColorInt() // general
 
-                // 强制过滤当前单词
-                tagCompletionAdapter.filter.filter(currentWord)
-
-                // 强制显示下拉
-                if (currentWord.isNotEmpty()) {
-                    searchBox.showDropDown()
-                }
+                else -> "#BDBDBD".toColorInt()
             }
-        })
 
-        searchBox.setOnItemClickListener { _, _, _, _ ->
+            chipBackgroundColor = ColorStateList.valueOf(color)
+            setTextColor(Color.WHITE)
+
+            // 删除逻辑（你原来的）
+            setOnCloseIconClickListener {
+                selectedTags.remove(tag)
+                tagChipGroup.removeView(this)
+                performSearch()
+            }
+
+            setOnLongClickListener {
+                val typeNum = tagTypeMap[tag]
+
+                val typeName = when (typeNum) {
+                    1 -> "artist"
+                    3 -> "copyright"
+                    4 -> "character"
+                    5 -> "circle"
+                    0 -> "general"
+                    else -> "unknown"
+                }
+
+                Toast.makeText(
+                    context,
+                    "$tag\n$typeName ($typeNum)",
+                    Toast.LENGTH_SHORT
+                ).show()
+
+                true
+            }
 
         }
 
-        handleIntent(intent)
+        tagChipGroup.addView(chip)
     }
+
+
 
     private fun observeViewModels() {
         lifecycleScope.launch {
@@ -327,22 +384,25 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun performSearch() {
-        // 隐藏键盘
-        val imm = getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
-        searchBox.post {
-            imm.hideSoftInputFromWindow(searchBox.windowToken, 0)
-            recyclerView.scrollToPosition(0)
-        }
+
+        val imm = getSystemService(INPUT_METHOD_SERVICE) as InputMethodManager
+        imm.hideSoftInputFromWindow(searchBox.windowToken, 0)
 
         val tags = mutableListOf<String>()
-        if (searchBox.text.isNotEmpty()) tags += searchBox.text.toString()
+
+        // 已选标签
+        tags += selectedTags
+
+        // rating
         if (ratingSCheckbox.isChecked) tags += "rating:s"
         if (ratingQCheckbox.isChecked) tags += "rating:q"
         if (ratingECheckbox.isChecked) tags += "rating:e"
 
         postViewModel.search(tags.joinToString(" "))
-        postAdapter.refresh()
+
+        recyclerView.scrollToPosition(0)
     }
+
 
     private fun showUpdateDialog(release: GitHubRelease) {
         AlertDialog.Builder(this).setTitle("New Version Available: ${release.name}")
@@ -391,12 +451,22 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun handleIntent(intent: Intent?) {
-        intent?.getStringExtra(NEW_SEARCH_TAG)?.let {
-            searchBox.setText(it)
+        intent?.getStringExtra(NEW_SEARCH_TAG)?.let { tag ->
+
+            // 1. 清空旧状态
+            selectedTags.clear()
+            tagChipGroup.removeAllViews()
+
+            // 2. 走新体系
+            addTag(tag)
+
+            // 3. 清空 rating
             ratingSCheckbox.isChecked = false
             ratingQCheckbox.isChecked = false
             ratingECheckbox.isChecked = false
+
             performSearch()
         }
     }
+
 }
