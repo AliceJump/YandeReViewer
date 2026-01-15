@@ -18,9 +18,11 @@ jobs:
 
     # 定义任务中的各个步骤
     steps:
-      # 1. 检出代码
+      # 1. 检出代码 (需要完整历史来找到上一个 tag)
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       # 2. 设置 JDK 17
       - name: Set up JDK 17
@@ -57,11 +59,22 @@ jobs:
           export SIGNING_KEY_PASSWORD="${{ secrets.SIGNING_KEY_PASSWORD }}"
           ./gradlew assembleRelease
 
-      # 7. 创建 Release 并上传 APK
+      # 7. 生成发布说明
+      - name: Generate release notes
+        id: generate_release_notes
+        run: |
+          CHANGELOG=$(git log -1 --pretty=format:"* %s (%h)" ${{ github.ref_name }})
+          echo "Changelog:"
+          echo "$CHANGELOG"
+          echo "changelog<<EOF" >> $GITHUB_OUTPUT
+          echo "$CHANGELOG" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
+      # 8. 创建 Release 并上传 APK
       - name: Create Release and Upload APK
         uses: ncipollo/release-action@v1
         with:
           artifacts: "app/build/outputs/apk/release/app-release.apk"
           tag: ${{ github.ref_name }}
-          generateReleaseNotes: true
+          body: ${{ steps.generate_release_notes.outputs.changelog }}
           token: ${{ secrets.GITHUB_TOKEN }}

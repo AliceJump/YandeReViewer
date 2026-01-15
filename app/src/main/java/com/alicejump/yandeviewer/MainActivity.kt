@@ -12,6 +12,7 @@ import android.os.Bundle
 import android.os.Environment
 import android.view.Menu
 import android.view.MenuItem
+import android.view.ViewTreeObserver
 import android.widget.Button
 import android.widget.CheckBox
 import android.widget.EditText
@@ -28,8 +29,8 @@ import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.updatePadding
 import androidx.lifecycle.lifecycleScope
 import androidx.paging.ExperimentalPagingApi
-import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.RecyclerView
+import androidx.recyclerview.widget.StaggeredGridLayoutManager
 import com.alicejump.yandeviewer.adapter.PostAdapter
 import com.alicejump.yandeviewer.network.GitHubRelease
 import com.alicejump.yandeviewer.viewmodel.PostViewModel
@@ -142,6 +143,22 @@ class MainActivity : AppCompatActivity() {
         updateViewModel.checkForUpdate(this, "AliceJump", "YandeReViewer")
     }
 
+    override fun onActivityReenter(resultCode: Int, data: Intent?) {
+        super.onActivityReenter(resultCode, data)
+        if (resultCode == RESULT_OK && data != null) {
+            postponeEnterTransition()
+            val position = data.getIntExtra("position", 0)
+            recyclerView.scrollToPosition(position)
+            recyclerView.viewTreeObserver.addOnPreDrawListener(object : ViewTreeObserver.OnPreDrawListener {
+                override fun onPreDraw(): Boolean {
+                    recyclerView.viewTreeObserver.removeOnPreDrawListener(this)
+                    startPostponedEnterTransition()
+                    return true
+                }
+            })
+        }
+    }
+
     override fun onDestroy() {
         super.onDestroy()
         unregisterReceiver(onDownloadComplete)
@@ -165,9 +182,15 @@ class MainActivity : AppCompatActivity() {
     private fun setupRecyclerView() {
         adapter = PostAdapter(
             onPostClick = { post, position, imageView ->
-                val layoutManager = recyclerView.layoutManager as GridLayoutManager
-                val firstVisible = layoutManager.findFirstVisibleItemPosition()
-                val lastVisible = layoutManager.findLastVisibleItemPosition()
+                val layoutManager = recyclerView.layoutManager as StaggeredGridLayoutManager
+                val firstVisiblePositions = IntArray(layoutManager.spanCount)
+                layoutManager.findFirstVisibleItemPositions(firstVisiblePositions)
+                val firstVisible = firstVisiblePositions.minOrNull() ?: 0
+
+                val lastVisiblePositions = IntArray(layoutManager.spanCount)
+                layoutManager.findLastVisibleItemPositions(lastVisiblePositions)
+                val lastVisible = lastVisiblePositions.maxOrNull() ?: 0
+
                 val intent = Intent(this, DetailActivity::class.java).apply {
                     val posts = adapter.snapshot().items
                     putParcelableArrayListExtra("posts", ArrayList(posts))
@@ -194,7 +217,7 @@ class MainActivity : AppCompatActivity() {
             }
         )
 
-        recyclerView.layoutManager = GridLayoutManager(this, 2)
+        recyclerView.layoutManager = StaggeredGridLayoutManager(2, StaggeredGridLayoutManager.VERTICAL)
         recyclerView.adapter = adapter
     }
 

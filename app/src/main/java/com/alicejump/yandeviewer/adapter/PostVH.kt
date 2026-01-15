@@ -14,7 +14,9 @@ class PostVH(view: View) : RecyclerView.ViewHolder(view) {
     private val checkbox: CheckBox = view.findViewById(R.id.checkbox)
 
     fun bind(post: Post, isSelectionMode: Boolean, isSelected: Boolean) {
-        imageView.load(post.preview_url)
+        imageView.load(post.preview_url) {
+            allowHardware(false)
+        }
         checkbox.isVisible = isSelectionMode
         checkbox.isChecked = isSelected
     }
