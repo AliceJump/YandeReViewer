@@ -2,7 +2,6 @@ package com.alicejump.yandeviewer
 
 import android.content.ClipData
 import android.content.ClipboardManager
-import android.content.Context
 import android.content.Intent
 import android.graphics.Canvas
 import android.os.Bundle

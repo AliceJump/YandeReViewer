@@ -43,16 +43,20 @@ import androidx.recyclerview.widget.RecyclerView
 import androidx.recyclerview.widget.StaggeredGridLayoutManager
 import androidx.swiperefreshlayout.widget.SwipeRefreshLayout
 import com.alicejump.yandeviewer.adapter.PostAdapter
+import com.alicejump.yandeviewer.network.GitHubApiClient
 import com.alicejump.yandeviewer.network.GitHubRelease
 import com.alicejump.yandeviewer.viewmodel.PostViewModel
 import com.alicejump.yandeviewer.viewmodel.TagTypeCache
 import com.alicejump.yandeviewer.viewmodel.UpdateCheckState
 import com.alicejump.yandeviewer.viewmodel.UpdateViewModel
+import com.github.chrisbanes.photoview.BuildConfig
 import com.google.android.material.chip.Chip
 import com.google.android.material.chip.ChipGroup
 import com.google.android.material.navigation.NavigationView
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 @OptIn(ExperimentalPagingApi::class)
 class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelectedListener {
@@ -339,10 +343,6 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
             }
 
             setOnLongClickListener {
-                val typeName = when (typeNum) {
-                    1 -> "artist"; 3 -> "copyright"; 4 -> "character"; 5 -> "circle"; 0 -> "general"
-                    else -> "unknown"
-                }
                 val clipboard = context.getSystemService(CLIPBOARD_SERVICE) as ClipboardManager
                 val clip = ClipData.newPlainText("Tag", tag)
                 clipboard.setPrimaryClip(clip)
@@ -356,26 +356,41 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
     }
 
     private fun observeViewModels() {
+        // 1️⃣ Post 列表分页
         lifecycleScope.launch {
-            postViewModel.posts.collectLatest { postAdapter.submitData(it) }
+            postViewModel.posts.collectLatest { pagingData ->
+                postAdapter.submitData(pagingData) // 显式类型避免 Cannot infer type for T
+            }
         }
 
+        // 2️⃣ 更新检查状态
         lifecycleScope.launch {
             updateViewModel.updateState.collect { state ->
                 when (state) {
-                    is UpdateCheckState.UpdateAvailable -> showUpdateDialog(state.release)
-                    is UpdateCheckState.Error -> Toast.makeText(
-                        this@MainActivity, getString(R.string.update_check_failed, state.message), Toast.LENGTH_LONG
-                    ).show()
-                    else -> {}
+                    is UpdateCheckState.UpdateAvailable -> {
+                        // 调用之前写好的 Dialog 函数
+                        showUpdateDialog(state.release)
+                    }
+                    is UpdateCheckState.Error -> {
+                        Toast.makeText(
+                            this@MainActivity,
+                            getString(R.string.update_check_failed, state.message),
+                            Toast.LENGTH_LONG
+                        ).show()
+                    }
+                    else -> {} // UpToDate 等状态可以忽略
                 }
             }
         }
 
+        // 3️⃣ 标签缓存
         lifecycleScope.launch {
-            TagTypeCache.tagTypes.collect { allAvailableTags = it.keys.toList() }
+            TagTypeCache.tagTypes.collect { tagMap ->
+                allAvailableTags = tagMap.keys.toList()
+            }
         }
     }
+
 
     private fun performSearch() {
         val imm = getSystemService(INPUT_METHOD_SERVICE) as InputMethodManager
@@ -391,22 +406,60 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
         recyclerView.scrollToPosition(0)
     }
 
+    private fun showUpdateDialog(latestRelease: GitHubRelease) {
+        lifecycleScope.launch {
+            // 1️⃣ 获取所有 release
+            val allReleases = withContext(Dispatchers.IO) {
+                GitHubApiClient.api.getAllReleases("owner", "repo") // 替换成你自己的 GitHub 仓库
+            }
 
-    private fun showUpdateDialog(release: GitHubRelease) {
-        AlertDialog.Builder(this).setTitle("New Version Available: ${release.name}")
-            .setMessage(release.body).setPositiveButton("Update Now") { dialog, _ ->
-                val apkAsset = release.assets.firstOrNull { it.downloadUrl.endsWith(".apk") }
-                if (apkAsset != null) startDownload(apkAsset.downloadUrl, release.tagName)
-                else Toast.makeText(this, R.string.no_apk_found, Toast.LENGTH_SHORT).show()
-                dialog.dismiss()
-            }.setNegativeButton("Ignore this version") { dialog, _ ->
-                updateViewModel.ignoreThisVersion(this, release.tagName.removePrefix("v"))
-                dialog.dismiss()
-            }.setNeutralButton("Remind me in 7 days") { dialog, _ ->
-                updateViewModel.snoozeUpdate(this, 7)
-                dialog.dismiss()
-            }.setCancelable(false).show()
+            val currentVersion = BuildConfig.VERSION_NAME
+            val newerReleases = allReleases
+                .filter { isVersionNewer(it.tagName, currentVersion) }
+                .sortedBy { it.tagName }
+
+            val changelog = newerReleases.joinToString("\n\n") { "Version ${it.tagName}:\n${it.body}" }
+
+            // 2️⃣ 弹出 Dialog
+            AlertDialog.Builder(this@MainActivity)
+                .setTitle("New Version Available: ${latestRelease.name}")
+                .setMessage(changelog.ifEmpty { "No changelog available" })
+                .setPositiveButton("Update Now") { dialog, _ ->
+                    val apkAsset = latestRelease.assets.firstOrNull { it.downloadUrl.endsWith(".apk") }
+                    if (apkAsset != null) {
+                        startDownload(apkAsset.downloadUrl, latestRelease.tagName)
+                    } else {
+                        Toast.makeText(this@MainActivity, R.string.no_apk_found, Toast.LENGTH_SHORT).show()
+                    }
+                    dialog.dismiss()
+                }
+                .setNegativeButton("Ignore this version") { dialog, _ ->
+                    updateViewModel.ignoreThisVersion(this@MainActivity, latestRelease.tagName.removePrefix("v"))
+                    dialog.dismiss()
+                }
+                .setNeutralButton("Remind me in 7 days") { dialog, _ ->
+                    updateViewModel.snoozeUpdate(this@MainActivity, 7)
+                    dialog.dismiss()
+                }
+                .setCancelable(false)
+                .show()
+        }
     }
+
+    /** 版本号比较函数 */
+    private fun isVersionNewer(version: String, current: String): Boolean {
+        val v1 = version.removePrefix("v").split(".").map { it.toIntOrNull() ?: 0 }
+        val v2 = current.removePrefix("v").split(".").map { it.toIntOrNull() ?: 0 }
+        for (i in 0 until maxOf(v1.size, v2.size)) {
+            val n1 = v1.getOrElse(i) { 0 }
+            val n2 = v2.getOrElse(i) { 0 }
+            if (n1 > n2) return true
+            if (n1 < n2) return false
+        }
+        return false
+    }
+
+
 
     private fun startDownload(url: String, version: String) {
         val downloadManager = getSystemService(DOWNLOAD_SERVICE) as DownloadManager
