@@ -127,7 +127,7 @@ class ImagePagerAdapter(private val posts: List<Post>) : RecyclerView.Adapter<Im
                 .setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED)
                 .setDestinationInExternalPublicDir(Environment.DIRECTORY_DOWNLOADS, "yande.re_${post.id}.jpg")
             downloadManager.enqueue(request)
-            Toast.makeText(context, "Started downloading...", Toast.LENGTH_SHORT).show()
+            Toast.makeText(context, R.string.started_downloading, Toast.LENGTH_SHORT).show()
         }
 
         @OptIn(ExperimentalCoilApi::class)
@@ -138,7 +138,7 @@ class ImagePagerAdapter(private val posts: List<Post>) : RecyclerView.Adapter<Im
             val diskCache = imageLoader.diskCache
 
             val snapshot = diskCache?.openSnapshot(post.file_url) ?: run {
-                Toast.makeText(context, "Image not cached yet, please wait.", Toast.LENGTH_SHORT).show()
+                Toast.makeText(context, R.string.image_not_cached, Toast.LENGTH_SHORT).show()
                 return
             }
 

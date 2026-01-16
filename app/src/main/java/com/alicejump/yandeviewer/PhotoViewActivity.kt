@@ -20,7 +20,7 @@ class PhotoViewActivity : AppCompatActivity() {
         val transitionName = intent.getStringExtra("transition_name")
 
         if (fileUrl.isNullOrEmpty()) {
-            Toast.makeText(this, "Image URL not found", Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, R.string.image_url_not_found, Toast.LENGTH_SHORT).show()
             finish()
             return
         }

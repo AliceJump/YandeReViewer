@@ -273,7 +273,7 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
                         )
                     downloadManager.enqueue(request)
                 }
-                Toast.makeText(this, "Started downloading ${selectedPosts.size} items", Toast.LENGTH_SHORT).show()
+                Toast.makeText(this, getString(R.string.started_downloading_multiple_items, selectedPosts.size), Toast.LENGTH_SHORT).show()
                 postAdapter.clearSelection()
                 hideSelectionMenu()
                 true
@@ -284,7 +284,7 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
                 val links = selectedPosts.joinToString("\n") { it.file_url }
                 val clip = ClipData.newPlainText("Yande.re Links", links)
                 clipboard.setPrimaryClip(clip)
-                Toast.makeText(this, "Links copied to clipboard", Toast.LENGTH_SHORT).show()
+                Toast.makeText(this, R.string.links_copied_to_clipboard, Toast.LENGTH_SHORT).show()
                 postAdapter.clearSelection()
                 hideSelectionMenu()
                 true
@@ -343,7 +343,7 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
                     1 -> "artist"; 3 -> "copyright"; 4 -> "character"; 5 -> "circle"; 0 -> "general"
                     else -> "unknown"
                 }
-                Toast.makeText(context, "$tag\n$typeName ($typeNum)", Toast.LENGTH_SHORT).show()
+                Toast.makeText(context, getString(R.string.tag_type_info, tag, typeName, typeNum), Toast.LENGTH_SHORT).show()
                 true
             }
         }
@@ -361,7 +361,7 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
                 when (state) {
                     is UpdateCheckState.UpdateAvailable -> showUpdateDialog(state.release)
                     is UpdateCheckState.Error -> Toast.makeText(
-                        this@MainActivity, "Update check failed: ${state.message}", Toast.LENGTH_LONG
+                        this@MainActivity, getString(R.string.update_check_failed, state.message), Toast.LENGTH_LONG
                     ).show()
                     else -> {}
                 }
@@ -393,7 +393,7 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
             .setMessage(release.body).setPositiveButton("Update Now") { dialog, _ ->
                 val apkAsset = release.assets.firstOrNull { it.downloadUrl.endsWith(".apk") }
                 if (apkAsset != null) startDownload(apkAsset.downloadUrl, release.tagName)
-                else Toast.makeText(this, "No APK found in the release.", Toast.LENGTH_SHORT).show()
+                else Toast.makeText(this, R.string.no_apk_found, Toast.LENGTH_SHORT).show()
                 dialog.dismiss()
             }.setNegativeButton("Ignore this version") { dialog, _ ->
                 updateViewModel.ignoreThisVersion(this, release.tagName.removePrefix("v"))
@@ -413,12 +413,12 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
                 this, Environment.DIRECTORY_DOWNLOADS, "YandeReViewer-$version.apk"
             )
         downloadId = downloadManager.enqueue(request)
-        Toast.makeText(this, "Download started...", Toast.LENGTH_SHORT).show()
+        Toast.makeText(this, R.string.download_started, Toast.LENGTH_SHORT).show()
     }
 
     private fun installApk(uri: Uri?) {
         if (uri == null) {
-            Toast.makeText(this, "Failed to install update: URI is null", Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, R.string.install_update_failed, Toast.LENGTH_SHORT).show()
             return
         }
         val intent = Intent(Intent.ACTION_VIEW).apply {
@@ -451,10 +451,10 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
 
     override fun onNavigationItemSelected(item: MenuItem): Boolean {
         when (item.itemId) {
-            R.id.nav_favorite_tags -> Toast.makeText(this, "收藏标签 Clicked", Toast.LENGTH_SHORT).show()
-            R.id.nav_favorite_images -> Toast.makeText(this, "收藏图片 Clicked", Toast.LENGTH_SHORT).show()
-            R.id.nav_blacklist_tags -> Toast.makeText(this, "黑名单标签 Clicked", Toast.LENGTH_SHORT).show()
-            R.id.nav_history -> Toast.makeText(this, "浏览记录 Clicked", Toast.LENGTH_SHORT).show()
+            R.id.nav_favorite_tags -> Toast.makeText(this, R.string.favorite_tags_clicked, Toast.LENGTH_SHORT).show()
+            R.id.nav_favorite_images -> Toast.makeText(this, R.string.favorite_images_clicked, Toast.LENGTH_SHORT).show()
+            R.id.nav_blacklist_tags -> Toast.makeText(this, R.string.blacklist_tags_clicked, Toast.LENGTH_SHORT).show()
+            R.id.nav_history -> Toast.makeText(this, R.string.history_clicked, Toast.LENGTH_SHORT).show()
         }
         drawerLayout.closeDrawer(GravityCompat.START)
         return true
