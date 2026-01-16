@@ -1,4 +1,3 @@
-
 package com.alicejump.yandeviewer
 
 import android.annotation.SuppressLint
@@ -31,7 +30,6 @@ import androidx.activity.viewModels
 import androidx.appcompat.app.ActionBarDrawerToggle
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
-import androidx.appcompat.view.ActionMode
 import androidx.appcompat.widget.Toolbar
 import androidx.core.app.ActivityOptionsCompat
 import androidx.core.content.ContextCompat
@@ -58,10 +56,10 @@ import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalPagingApi::class)
 class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelectedListener {
+
     private lateinit var tagChipGroup: ChipGroup
     private lateinit var drawerLayout: DrawerLayout
 
-    // 真正的标签数据源
     private val selectedTags = linkedSetOf<String>()
 
     private val postViewModel by viewModels<PostViewModel>()
@@ -78,10 +76,8 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
 
     private lateinit var tagCompletionAdapter: ArrayAdapter<String>
     private var allAvailableTags: List<String> = emptyList()
-
-    private var actionMode: ActionMode? = null
     private var downloadId: Long = 0
-    private var tagTypeMap: Map<String, Int> = emptyMap()
+
     private val onDownloadComplete: BroadcastReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context, intent: Intent) {
             val id = intent.getLongExtra(DownloadManager.EXTRA_DOWNLOAD_ID, -1)
@@ -106,60 +102,6 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
     companion object {
         const val NEW_SEARCH_TAG = "NEW_SEARCH_TAG"
     }
-
-    private val actionModeCallback = object : ActionMode.Callback {
-        override fun onCreateActionMode(mode: ActionMode, menu: Menu): Boolean {
-            mode.menuInflater.inflate(R.menu.action_mode_menu, menu)
-            return true
-        }
-
-        override fun onPrepareActionMode(mode: ActionMode, menu: Menu): Boolean = false
-
-        override fun onActionItemClicked(mode: ActionMode, item: MenuItem): Boolean {
-            val selectedItems = postAdapter.getSelectedItems()
-            return when (item.itemId) {
-                R.id.action_download -> {
-                    val downloadManager = getSystemService(DOWNLOAD_SERVICE) as DownloadManager
-                    selectedItems.forEach { post ->
-                        val request = DownloadManager.Request(post.file_url.toUri())
-                            .setTitle("Downloading Post ${post.id}").setDescription(post.tags)
-                            .setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED)
-                            .setDestinationInExternalPublicDir(
-                                Environment.DIRECTORY_DOWNLOADS, "yande.re_${post.id}.jpg"
-                            )
-                        downloadManager.enqueue(request)
-                    }
-                    Toast.makeText(
-                        this@MainActivity,
-                        "Started downloading ${selectedItems.size} items",
-                        Toast.LENGTH_SHORT
-                    ).show()
-                    mode.finish()
-                    true
-                }
-
-                R.id.action_copy_links -> {
-                    val clipboard = getSystemService(CLIPBOARD_SERVICE) as ClipboardManager
-                    val links = selectedItems.joinToString("\n") { it.file_url }
-                    val clip = ClipData.newPlainText("Yande.re Links", links)
-                    clipboard.setPrimaryClip(clip)
-                    Toast.makeText(
-                        this@MainActivity, "Links copied to clipboard", Toast.LENGTH_SHORT
-                    ).show()
-                    mode.finish()
-                    true
-                }
-
-                else -> false
-            }
-        }
-
-        override fun onDestroyActionMode(mode: ActionMode) {
-            postAdapter.exitSelectionMode()
-            actionMode = null
-        }
-    }
-
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -192,7 +134,6 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
         setupSearch()
         observeViewModels()
 
-        // Paging3 + SwipeRefreshLayout 联动
         lifecycleScope.launch {
             postAdapter.loadStateFlow.collect { loadState ->
                 swipeRefreshLayout.isRefreshing =
@@ -200,7 +141,6 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
             }
         }
 
-        // 启动检查更新
         updateViewModel.checkForUpdate(this, "AliceJump", "YandeReViewer")
     }
 
@@ -210,7 +150,6 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
     }
 
     private fun setupViews() {
-
         recyclerView = findViewById(R.id.recyclerView)
         searchBox = findViewById(R.id.searchBox)
         searchBtn = findViewById(R.id.searchBtn)
@@ -218,69 +157,55 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
         ratingQCheckbox = findViewById(R.id.rating_q_checkbox)
         ratingECheckbox = findViewById(R.id.rating_e_checkbox)
         swipeRefreshLayout = findViewById(R.id.swipeRefreshLayout)
-
         tagChipGroup = findViewById(R.id.tagChipGroup)
 
-
         swipeRefreshLayout.setOnRefreshListener {
-            performSearch()
-        }
-    }
-    private fun setupSearch() {
+            performSearch()      // 原来的搜索逻辑
 
+            postAdapter.refresh()  // 强制 Paging3 重新加载，即使 query 没变
+        }
+
+    }
+
+    private fun setupSearch() {
         searchBtn.setOnClickListener { performSearch() }
 
-        // ===== 补全 =====
         tagCompletionAdapter =
             ArrayAdapter(this, android.R.layout.simple_dropdown_item_1line, mutableListOf())
-
         searchBox.setAdapter(tagCompletionAdapter)
         searchBox.threshold = 1
+
         searchBox.setOnEditorActionListener { _, actionId, event ->
             if (actionId == EditorInfo.IME_ACTION_SEARCH ||
                 actionId == EditorInfo.IME_ACTION_DONE ||
                 event?.keyCode == KeyEvent.KEYCODE_ENTER
             ) {
-                // 如果输入框里还有手打的 tag，也要加进去
                 val text = searchBox.text.toString().trim()
                 if (text.isNotEmpty()) {
                     addTag(text)
                     searchBox.setText("")
                 }
-
                 performSearch()
                 true
-            } else {
-                false
-            }
+            } else false
         }
 
-        // 输入过滤
         searchBox.addTextChangedListener(object : TextWatcher {
             override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
             override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
-
             override fun afterTextChanged(s: Editable?) {
                 val word = s?.toString()?.trim() ?: return
-
                 tagCompletionAdapter.clear()
                 tagCompletionAdapter.addAll(allAvailableTags)
                 tagCompletionAdapter.filter.filter(word)
-
-                if (word.isNotEmpty()) {
-                    searchBox.showDropDown()
-                }
+                if (word.isNotEmpty()) searchBox.showDropDown()
             }
         })
 
-        // 选中补全
         searchBox.setOnItemClickListener { parent, _, position, _ ->
             val tag = parent.getItemAtPosition(position) as String
-
             addTag(tag)
-
             searchBox.setText("")
-
             performSearch()
         }
 
@@ -288,80 +213,125 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
     }
 
     private fun setupRecyclerView() {
-        postAdapter = PostAdapter(onPostClick = { post, position, imageView ->
-            val layoutManager = recyclerView.layoutManager as StaggeredGridLayoutManager
-            val firstVisiblePositions = IntArray(layoutManager.spanCount)
-            layoutManager.findFirstVisibleItemPositions(firstVisiblePositions)
-            val firstVisible = firstVisiblePositions.minOrNull() ?: 0
+        postAdapter = PostAdapter(
+            onPostClick = { post, position, imageView ->
+                val layoutManager = recyclerView.layoutManager as StaggeredGridLayoutManager
+                val firstVisiblePositions = IntArray(layoutManager.spanCount)
+                layoutManager.findFirstVisibleItemPositions(firstVisiblePositions)
+                val firstVisible = firstVisiblePositions.minOrNull() ?: 0
 
-            val lastVisiblePositions = IntArray(layoutManager.spanCount)
-            layoutManager.findLastVisibleItemPositions(lastVisiblePositions)
-            val lastVisible = lastVisiblePositions.maxOrNull() ?: 0
+                val lastVisiblePositions = IntArray(layoutManager.spanCount)
+                layoutManager.findLastVisibleItemPositions(lastVisiblePositions)
+                val lastVisible = lastVisiblePositions.maxOrNull() ?: 0
 
-            val intent = Intent(this, DetailActivity::class.java).apply {
-                val posts = postAdapter.snapshot().items
-                putParcelableArrayListExtra("posts", ArrayList(posts))
-                putExtra("position", position)
-                putExtra("first_visible_position", firstVisible)
-                putExtra("last_visible_position", lastVisible)
-            }
-            val transitionName = "image_transition_${post.id}"
-            imageView.transitionName = transitionName
-            intent.putExtra("transition_name", transitionName)
-
-            val options = ActivityOptionsCompat.makeSceneTransitionAnimation(
-                this, imageView, transitionName
-            )
-            detailActivityLauncher.launch(intent, options)
-        }, onSelectionChange = { count ->
-            if (count > 0) {
-                if (actionMode == null) {
-                    actionMode = startSupportActionMode(actionModeCallback)
+                val intent = Intent(this, DetailActivity::class.java).apply {
+                    val posts = postAdapter.snapshot().items
+                    putParcelableArrayListExtra("posts", ArrayList(posts))
+                    putExtra("position", position)
+                    putExtra("first_visible_position", firstVisible)
+                    putExtra("last_visible_position", lastVisible)
                 }
-                actionMode?.title = "$count selected"
-            } else {
-                actionMode?.finish()
+
+                val transitionName = "image_transition_${post.id}"
+                imageView.transitionName = transitionName
+                intent.putExtra("transition_name", transitionName)
+
+                val options = ActivityOptionsCompat.makeSceneTransitionAnimation(
+                    this, imageView, transitionName
+                )
+                detailActivityLauncher.launch(intent, options)
+            },
+            onSelectionChange = { count ->
+                if (count > 0) showSelectionMenu(count) else hideSelectionMenu()
             }
-        })
+        )
 
         recyclerView.layoutManager =
             StaggeredGridLayoutManager(2, StaggeredGridLayoutManager.VERTICAL)
         recyclerView.adapter = postAdapter
     }
 
+    override fun onCreateOptionsMenu(menu: Menu): Boolean {
+        menuInflater.inflate(R.menu.main_menu, menu)
+        menu.findItem(R.id.action_download)?.isVisible = false
+        menu.findItem(R.id.action_copy_links)?.isVisible = false
+        return true
+    }
+
+    override fun onOptionsItemSelected(item: MenuItem): Boolean {
+        val selectedPosts = postAdapter.getSelectedItems()
+        return when (item.itemId) {
+            R.id.action_download -> {
+                val downloadManager = getSystemService(DOWNLOAD_SERVICE) as DownloadManager
+                selectedPosts.forEach { post ->
+                    val request = DownloadManager.Request(post.file_url.toUri())
+                        .setTitle("Downloading Post ${post.id}")
+                        .setDescription(post.tags)
+                        .setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED)
+                        .setDestinationInExternalPublicDir(
+                            Environment.DIRECTORY_DOWNLOADS, "yande.re_${post.id}.jpg"
+                        )
+                    downloadManager.enqueue(request)
+                }
+                Toast.makeText(this, "Started downloading ${selectedPosts.size} items", Toast.LENGTH_SHORT).show()
+                postAdapter.clearSelection()
+                hideSelectionMenu()
+                true
+            }
+
+            R.id.action_copy_links -> {
+                val clipboard = getSystemService(CLIPBOARD_SERVICE) as ClipboardManager
+                val links = selectedPosts.joinToString("\n") { it.file_url }
+                val clip = ClipData.newPlainText("Yande.re Links", links)
+                clipboard.setPrimaryClip(clip)
+                Toast.makeText(this, "Links copied to clipboard", Toast.LENGTH_SHORT).show()
+                postAdapter.clearSelection()
+                hideSelectionMenu()
+                true
+            }
+
+            else -> super.onOptionsItemSelected(item)
+        }
+    }
+
+    private fun showSelectionMenu(count: Int) {
+        supportActionBar?.title = "$count selected"
+        val menu = findViewById<Toolbar>(R.id.toolbar).menu
+        menu.findItem(R.id.action_download)?.isVisible = true
+        menu.findItem(R.id.action_copy_links)?.isVisible = true
+    }
+
+    private fun hideSelectionMenu() {
+        supportActionBar?.title = getString(R.string.app_name)
+        val menu = findViewById<Toolbar>(R.id.toolbar).menu
+        menu.findItem(R.id.action_download)?.isVisible = false
+        menu.findItem(R.id.action_copy_links)?.isVisible = false
+    }
+
     private fun addTag(tag: String) {
         if (selectedTags.contains(tag)) return
-
         selectedTags.add(tag)
+
         val chip = Chip(this).apply {
             text = tag
             isCloseIconVisible = true
 
-            // ===== 重点：颜色逻辑 =====
-
-
-            val typeNum = TagTypeCache.tagTypes.value[tag]   // ← 直接取当前值
-
+            val typeNum = TagTypeCache.tagTypes.value[tag]
             val color = when {
-                // rating 特殊规则
                 tag.startsWith("rating:s") -> "#4CAF50".toColorInt()
                 tag.startsWith("rating:q") -> "#FFC107".toColorInt()
                 tag.startsWith("rating:e") -> "#F44336".toColorInt()
-
-                // typenum 规则
-                typeNum == 1 -> "#F06292".toColorInt() // artist
-                typeNum == 3 -> "#BA68C8".toColorInt() // copyright
-                typeNum == 4 -> "#7986CB".toColorInt() // character
-                typeNum == 5 -> "#4DB6AC".toColorInt() // circle
-                typeNum == 0 -> "#90A4AE".toColorInt() // general
-
+                typeNum == 1 -> "#F06292".toColorInt()
+                typeNum == 3 -> "#BA68C8".toColorInt()
+                typeNum == 4 -> "#7986CB".toColorInt()
+                typeNum == 5 -> "#4DB6AC".toColorInt()
+                typeNum == 0 -> "#90A4AE".toColorInt()
                 else -> "#BDBDBD".toColorInt()
             }
 
             chipBackgroundColor = ColorStateList.valueOf(color)
             setTextColor(Color.WHITE)
 
-            // 删除逻辑（你原来的）
             setOnCloseIconClickListener {
                 selectedTags.remove(tag)
                 tagChipGroup.removeView(this)
@@ -369,38 +339,21 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
             }
 
             setOnLongClickListener {
-                val typeNum = tagTypeMap[tag]
-
                 val typeName = when (typeNum) {
-                    1 -> "artist"
-                    3 -> "copyright"
-                    4 -> "character"
-                    5 -> "circle"
-                    0 -> "general"
+                    1 -> "artist"; 3 -> "copyright"; 4 -> "character"; 5 -> "circle"; 0 -> "general"
                     else -> "unknown"
                 }
-
-                Toast.makeText(
-                    context,
-                    "$tag\n$typeName ($typeNum)",
-                    Toast.LENGTH_SHORT
-                ).show()
-
+                Toast.makeText(context, "$tag\n$typeName ($typeNum)", Toast.LENGTH_SHORT).show()
                 true
             }
-
         }
 
         tagChipGroup.addView(chip)
     }
 
-
-
     private fun observeViewModels() {
         lifecycleScope.launch {
-            postViewModel.posts.collectLatest {
-                postAdapter.submitData(it)
-            }
+            postViewModel.posts.collectLatest { postAdapter.submitData(it) }
         }
 
         lifecycleScope.launch {
@@ -408,40 +361,29 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
                 when (state) {
                     is UpdateCheckState.UpdateAvailable -> showUpdateDialog(state.release)
                     is UpdateCheckState.Error -> Toast.makeText(
-                        this@MainActivity,
-                        "Update check failed: ${state.message}",
-                        Toast.LENGTH_LONG
+                        this@MainActivity, "Update check failed: ${state.message}", Toast.LENGTH_LONG
                     ).show()
-
                     else -> {}
                 }
             }
         }
 
         lifecycleScope.launch {
-            TagTypeCache.tagTypes.collect {
-                allAvailableTags = it.keys.toList()
-            }
+            TagTypeCache.tagTypes.collect { allAvailableTags = it.keys.toList() }
         }
     }
 
     private fun performSearch() {
-
         val imm = getSystemService(INPUT_METHOD_SERVICE) as InputMethodManager
         imm.hideSoftInputFromWindow(searchBox.windowToken, 0)
 
         val tags = mutableListOf<String>()
-
-        // 已选标签
         tags += selectedTags
-
-        // rating
         if (ratingSCheckbox.isChecked) tags += "rating:s"
         if (ratingQCheckbox.isChecked) tags += "rating:q"
         if (ratingECheckbox.isChecked) tags += "rating:e"
 
         postViewModel.search(tags.joinToString(" "))
-
         recyclerView.scrollToPosition(0)
     }
 
@@ -487,6 +429,7 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
         startActivity(intent)
     }
 
+
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         handleIntent(intent)
@@ -494,18 +437,13 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
 
     private fun handleIntent(intent: Intent?) {
         intent?.getStringExtra(NEW_SEARCH_TAG)?.let { tag ->
-
-            // 1. 清空旧状态
             selectedTags.clear()
             tagChipGroup.removeAllViews()
-
-            // 2. 走新体系
             addTag(tag)
-
-
             performSearch()
         }
     }
+
     override fun onStop() {
         super.onStop()
         TagTypeCache.flush(this)
@@ -513,32 +451,28 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
 
     override fun onNavigationItemSelected(item: MenuItem): Boolean {
         when (item.itemId) {
-            R.id.nav_favorite_tags -> {
-                Toast.makeText(this, "收藏标签 Clicked", Toast.LENGTH_SHORT).show()
-            }
-            R.id.nav_favorite_images -> {
-                Toast.makeText(this, "收藏图片 Clicked", Toast.LENGTH_SHORT).show()
-            }
-            R.id.nav_blacklist_tags -> {
-                Toast.makeText(this, "黑名单标签 Clicked", Toast.LENGTH_SHORT).show()
-            }
-            R.id.nav_history -> {
-                Toast.makeText(this, "浏览记录 Clicked", Toast.LENGTH_SHORT).show()
-            }
+            R.id.nav_favorite_tags -> Toast.makeText(this, "收藏标签 Clicked", Toast.LENGTH_SHORT).show()
+            R.id.nav_favorite_images -> Toast.makeText(this, "收藏图片 Clicked", Toast.LENGTH_SHORT).show()
+            R.id.nav_blacklist_tags -> Toast.makeText(this, "黑名单标签 Clicked", Toast.LENGTH_SHORT).show()
+            R.id.nav_history -> Toast.makeText(this, "浏览记录 Clicked", Toast.LENGTH_SHORT).show()
         }
-
         drawerLayout.closeDrawer(GravityCompat.START)
         return true
     }
 
+    @Deprecated("This method has been deprecated in favor of using the\n      {@link OnBackPressedDispatcher} via {@link #getOnBackPressedDispatcher()}.\n      The OnBackPressedDispatcher controls how back button events are dispatched\n      to one or more {@link OnBackPressedCallback} objects.")
     @SuppressLint("GestureBackNavigation")
-    @Deprecated("Use OnBackInvokedDispatcher instead", ReplaceWith("onBackPressed()"))
     override fun onBackPressed() {
         if (drawerLayout.isDrawerOpen(GravityCompat.START)) {
             drawerLayout.closeDrawer(GravityCompat.START)
-        } else {
-            super.onBackPressed()
+            return
         }
-    }
 
+        if (postAdapter.isSelectionActive()) {
+            postAdapter.clearSelection()
+            hideSelectionMenu()
+            return
+        }
+        super.onBackPressed()
+    }
 }
