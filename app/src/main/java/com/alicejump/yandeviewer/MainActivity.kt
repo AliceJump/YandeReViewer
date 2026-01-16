@@ -1,5 +1,7 @@
+
 package com.alicejump.yandeviewer
 
+import android.annotation.SuppressLint
 import android.app.DownloadManager
 import android.content.BroadcastReceiver
 import android.content.ClipData
@@ -26,13 +28,17 @@ import android.widget.CheckBox
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
+import androidx.appcompat.app.ActionBarDrawerToggle
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.view.ActionMode
+import androidx.appcompat.widget.Toolbar
 import androidx.core.app.ActivityOptionsCompat
 import androidx.core.content.ContextCompat
 import androidx.core.graphics.toColorInt
 import androidx.core.net.toUri
+import androidx.core.view.GravityCompat
+import androidx.drawerlayout.widget.DrawerLayout
 import androidx.lifecycle.lifecycleScope
 import androidx.paging.ExperimentalPagingApi
 import androidx.recyclerview.widget.RecyclerView
@@ -46,12 +52,14 @@ import com.alicejump.yandeviewer.viewmodel.UpdateCheckState
 import com.alicejump.yandeviewer.viewmodel.UpdateViewModel
 import com.google.android.material.chip.Chip
 import com.google.android.material.chip.ChipGroup
+import com.google.android.material.navigation.NavigationView
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalPagingApi::class)
-class MainActivity : AppCompatActivity() {
+class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelectedListener {
     private lateinit var tagChipGroup: ChipGroup
+    private lateinit var drawerLayout: DrawerLayout
 
     // 真正的标签数据源
     private val selectedTags = linkedSetOf<String>()
@@ -156,6 +164,20 @@ class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
+
+        val toolbar: Toolbar = findViewById(R.id.toolbar)
+        setSupportActionBar(toolbar)
+
+        drawerLayout = findViewById(R.id.drawer_layout)
+        val navView: NavigationView = findViewById(R.id.nav_view)
+
+        val toggle = ActionBarDrawerToggle(
+            this, drawerLayout, toolbar, R.string.navigation_drawer_open, R.string.navigation_drawer_close
+        )
+        drawerLayout.addDrawerListener(toggle)
+        toggle.syncState()
+
+        navView.setNavigationItemSelectedListener(this)
 
         // 注册下载完成广播
         ContextCompat.registerReceiver(
@@ -487,6 +509,36 @@ class MainActivity : AppCompatActivity() {
     override fun onStop() {
         super.onStop()
         TagTypeCache.flush(this)
+    }
+
+    override fun onNavigationItemSelected(item: MenuItem): Boolean {
+        when (item.itemId) {
+            R.id.nav_favorite_tags -> {
+                Toast.makeText(this, "收藏标签 Clicked", Toast.LENGTH_SHORT).show()
+            }
+            R.id.nav_favorite_images -> {
+                Toast.makeText(this, "收藏图片 Clicked", Toast.LENGTH_SHORT).show()
+            }
+            R.id.nav_blacklist_tags -> {
+                Toast.makeText(this, "黑名单标签 Clicked", Toast.LENGTH_SHORT).show()
+            }
+            R.id.nav_history -> {
+                Toast.makeText(this, "浏览记录 Clicked", Toast.LENGTH_SHORT).show()
+            }
+        }
+
+        drawerLayout.closeDrawer(GravityCompat.START)
+        return true
+    }
+
+    @SuppressLint("GestureBackNavigation")
+    @Deprecated("Use OnBackInvokedDispatcher instead", ReplaceWith("onBackPressed()"))
+    override fun onBackPressed() {
+        if (drawerLayout.isDrawerOpen(GravityCompat.START)) {
+            drawerLayout.closeDrawer(GravityCompat.START)
+        } else {
+            super.onBackPressed()
+        }
     }
 
 }

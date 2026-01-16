@@ -9,10 +9,10 @@
             <InsightsFilterSettings>
               <option name="connection">
                 <ConnectionSetting>
-                  <option name="appId" value="com.alicejump.yandeviewer" />
-                  <option name="mobileSdkAppId" value="1:544117813496:android:759a024a2656c8e3148b0d" />
-                  <option name="projectId" value="yandereviewer" />
-                  <option name="projectNumber" value="544117813496" />
+                  <option name="appId" value="PLACEHOLDER" />
+                  <option name="mobileSdkAppId" value="" />
+                  <option name="projectId" value="" />
+                  <option name="projectNumber" value="" />
                 </ConnectionSetting>
               </option>
               <option name="signal" value="SIGNAL_UNSPECIFIED" />

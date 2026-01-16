@@ -2,4 +2,6 @@
     <!-- Base application theme. -->
     <style name="Theme.YandeReViewer" parent="Theme.Material3.DayNight.NoActionBar">
     </style>
+
+    <style name="Theme.YandeReViewer.PopupOverlay" parent="ThemeOverlay.AppCompat.Light" />
 </resources>

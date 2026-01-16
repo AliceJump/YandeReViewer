@@ -12,4 +12,6 @@
     <string name="detail_character_label">角色:</string>
     <string name="detail_tags_label">标签:</string>
     <string name="detail_source_button_text">来源</string>
+    <string name="navigation_drawer_open">打开导航抽屉</string>
+    <string name="navigation_drawer_close">关闭导航抽屉</string>
 </resources>
