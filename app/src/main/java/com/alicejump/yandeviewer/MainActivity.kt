@@ -410,17 +410,25 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
         lifecycleScope.launch {
             // 1️⃣ 获取所有 release
             val allReleases = withContext(Dispatchers.IO) {
-                GitHubApiClient.api.getAllReleases("AliceJump", "YandeReViewer") // 替换成你自己的 GitHub 仓库
+                GitHubApiClient.api.getAllReleases("AliceJump", "YandeReViewer")
             }
 
-            val currentVersion = BuildConfig.VERSION_NAME
+            // 2️⃣ 动态获取 APK 安装版本
+            val currentVersion = try {
+                val pInfo = packageManager.getPackageInfo(packageName, 0)
+                pInfo.versionName ?: "0.0"
+            } catch (e: Exception) {
+                "0.0"
+            }
+
+            // 3️⃣ 过滤比当前版本新的 release
             val newerReleases = allReleases
                 .filter { isVersionNewer(it.tagName, currentVersion) }
                 .sortedBy { it.tagName }
 
             val changelog = newerReleases.joinToString("\n\n") { "Version ${it.tagName}:\n${it.body}" }
 
-            // 2️⃣ 弹出 Dialog
+            // 4️⃣ 弹出 Dialog
             AlertDialog.Builder(this@MainActivity)
                 .setTitle("New Version Available: ${latestRelease.name}")
                 .setMessage(changelog.ifEmpty { "No changelog available" })
@@ -458,6 +466,7 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
         }
         return false
     }
+
 
 
 
