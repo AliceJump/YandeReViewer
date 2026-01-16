@@ -1,5 +1,5 @@
 <resources>
-    <string name="app_name">yandeviewer</string>
+    <string name="app_name">YandeReViewer</string>
     <string name="search_hint">tags</string>
     <string name="search_button_text">search</string>
     <string name="rating_s">rating:s</string>
@@ -18,16 +18,17 @@
     <string name="copy_links">Copy Links</string>
     <string name="started_downloading_multiple_items">Started downloading %1$d items</string>
     <string name="links_copied_to_clipboard">Links copied to clipboard</string>
-    <string name="tag_type_info">%1$s\n%2$s (%3$d)</string>
+    <string name="tag_type_info">%1$s\nType: %2$s (%3$d)</string>
     <string name="update_check_failed">Update check failed: %1$s</string>
     <string name="no_apk_found">No APK found in the release.</string>
-    <string name="download_started">Download started...</string>
+    <string name="download_started">Download started…</string>
     <string name="install_update_failed">Failed to install update: URI is null</string>
-    <string name="favorite_tags_clicked">已收藏标签</string>
-    <string name="favorite_images_clicked">已收藏图片</string>
-    <string name="blacklist_tags_clicked">已拉黑标签</string>
-    <string name="history_clicked">历史记录</string>
+    <string name="favorite_tags_clicked">Favorite Tags</string>
+    <string name="favorite_images_clicked">Favorite Images</string>
+    <string name="blacklist_tags_clicked">Blacklist Tags</string>
+    <string name="history_clicked">History</string>
     <string name="image_url_not_found">Image URL not found</string>
     <string name="image_not_cached">Image not cached yet, please wait.</string>
-    <string name="started_downloading">Started downloading...</string>
+    <string name="started_downloading">Started downloading…</string>
+    <string name="tag_copied_to_clipboard">Tag copied to clipboard</string>
 </resources>

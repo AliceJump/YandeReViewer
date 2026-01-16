@@ -343,7 +343,11 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
                     1 -> "artist"; 3 -> "copyright"; 4 -> "character"; 5 -> "circle"; 0 -> "general"
                     else -> "unknown"
                 }
-                Toast.makeText(context, getString(R.string.tag_type_info, tag, typeName, typeNum), Toast.LENGTH_SHORT).show()
+                val clipboard = context.getSystemService(CLIPBOARD_SERVICE) as ClipboardManager
+                val clip = ClipData.newPlainText("Tag", tag)
+                clipboard.setPrimaryClip(clip)
+                Toast.makeText(context, getString(R.string.tag_copied_to_clipboard), Toast.LENGTH_SHORT).show()
+
                 true
             }
         }
