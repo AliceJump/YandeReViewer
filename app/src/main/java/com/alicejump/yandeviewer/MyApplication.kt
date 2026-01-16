@@ -33,7 +33,18 @@ class MyApplication : Application(), ImageLoaderFactory {
         // Launch the tag synchronization task in the background
         TagSyncer.launchSync(this)
     }
+    override fun onTerminate() {
+        super.onTerminate()
+        TagTypeCache.flush(this)
+    }
 
+    override fun onTrimMemory(level: Int) {
+        super.onTrimMemory(level)
+
+        if (level >= TRIM_MEMORY_BACKGROUND) {
+            TagTypeCache.flush(this)
+        }
+    }
     private fun copyInitialDataFiles() {
         CoroutineScope(Dispatchers.IO).launch {
             // List of files to copy from assets on first run

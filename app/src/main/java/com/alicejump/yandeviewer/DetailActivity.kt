@@ -324,4 +324,9 @@ class DetailActivity : AppCompatActivity() {
         label.visibility = visibility
         group.visibility = visibility
     }
+    override fun onStop() {
+        super.onStop()
+        TagTypeCache.flush(this)
+    }
+
 }

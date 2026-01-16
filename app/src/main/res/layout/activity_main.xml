@@ -12,7 +12,8 @@
         android:layout_height="wrap_content"
         android:hint="@string/search_hint"
         android:imeOptions="actionSearch"
-        android:inputType="text" />
+        android:inputType="text"
+        android:singleLine="true"/>
 
     <!-- 已选标签区域 -->
     <HorizontalScrollView

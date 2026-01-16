@@ -14,8 +14,10 @@ import android.os.Bundle
 import android.os.Environment
 import android.text.Editable
 import android.text.TextWatcher
+import android.view.KeyEvent
 import android.view.Menu
 import android.view.MenuItem
+import android.view.inputmethod.EditorInfo
 import android.view.inputmethod.InputMethodManager
 import android.widget.ArrayAdapter
 import android.widget.AutoCompleteTextView
@@ -212,6 +214,24 @@ class MainActivity : AppCompatActivity() {
 
         searchBox.setAdapter(tagCompletionAdapter)
         searchBox.threshold = 1
+        searchBox.setOnEditorActionListener { _, actionId, event ->
+            if (actionId == EditorInfo.IME_ACTION_SEARCH ||
+                actionId == EditorInfo.IME_ACTION_DONE ||
+                event?.keyCode == KeyEvent.KEYCODE_ENTER
+            ) {
+                // 如果输入框里还有手打的 tag，也要加进去
+                val text = searchBox.text.toString().trim()
+                if (text.isNotEmpty()) {
+                    addTag(text)
+                    searchBox.setText("")
+                }
+
+                performSearch()
+                true
+            } else {
+                false
+            }
+        }
 
         // 输入过滤
         searchBox.addTextChangedListener(object : TextWatcher {
@@ -460,13 +480,13 @@ class MainActivity : AppCompatActivity() {
             // 2. 走新体系
             addTag(tag)
 
-            // 3. 清空 rating
-            ratingSCheckbox.isChecked = false
-            ratingQCheckbox.isChecked = false
-            ratingECheckbox.isChecked = false
 
             performSearch()
         }
+    }
+    override fun onStop() {
+        super.onStop()
+        TagTypeCache.flush(this)
     }
 
 }

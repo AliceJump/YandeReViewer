@@ -2,95 +2,82 @@ package com.alicejump.yandeviewer.sync
 
 import android.content.Context
 import com.alicejump.yandeviewer.network.RetrofitClient
-import com.google.gson.Gson
-import com.google.gson.reflect.TypeToken
+import com.alicejump.yandeviewer.viewmodel.TagTypeCache
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
-import java.io.File
 import java.util.concurrent.atomic.AtomicBoolean
 
 object TagSyncer {
 
-    private const val TAG_DICT_FILE = "tags_name_type.json"
-    private const val LAST_ID_FILE = "last_id.txt"
     private val isSyncing = AtomicBoolean(false)
 
     fun launchSync(context: Context) {
-        // Prevent multiple syncs from running at the same time
-        if (isSyncing.getAndSet(true)) {
-            return
-        }
+        if (isSyncing.getAndSet(true)) return
 
         CoroutineScope(Dispatchers.IO).launch {
-            var syncCompletedSuccessfully = false
             try {
-                val filesDir = context.filesDir
-                val gson = Gson()
-
-                // Step 1: Read existing data
-                val tagDictFile = File(filesDir, TAG_DICT_FILE)
-                val tagDict: MutableMap<String, Int> = if (tagDictFile.exists()) {
-                    val type = object : TypeToken<MutableMap<String, Int>>() {}.type
-                    gson.fromJson(tagDictFile.reader(), type)
-                } else {
-                    mutableMapOf()
-                }
-
-                val lastIdFile = File(filesDir, LAST_ID_FILE)
-                val lastSavedId = if (lastIdFile.exists()) lastIdFile.readText().toLongOrNull() ?: 0L else 0L
+                val lastSavedId = TagTypeCache.getLastSyncedId(context)
 
                 var firstNewId: Long? = null
                 var page = 1
+                var syncCompletedSuccessfully = false
 
-                // Step 2: Paginated fetch loop
+                // 👉【新增】全量暂存区
+                val totalNewTags = mutableMapOf<String, Int>()
+
                 while (true) {
-                    val tags = try {
+                    val tagsFromApi = try {
                         RetrofitClient.api.getTagsByPage(page = page)
                     } catch (_: Exception) {
-                        // Network error or other issues, break without marking as successful
                         break
                     }
 
-                    if (tags.isEmpty()) {
-                        syncCompletedSuccessfully = true // Normal termination
+                    if (tagsFromApi.isEmpty()) {
+                        syncCompletedSuccessfully = true
                         break
                     }
 
                     var newTagsFoundInPage = false
-                    tags.forEach { tag ->
+
+                    tagsFromApi.forEach { tag ->
+
+                        // ✅ 只处理真正的新标签
                         if (tag.id >= lastSavedId) {
+
                             newTagsFoundInPage = true
-                            // Record the first new ID we encounter
+
                             if (firstNewId == null) {
                                 firstNewId = tag.id.toLong()
                             }
+
+                            // ✅ 只把新标签放入
+                            totalNewTags[tag.name] = tag.type
                         }
-                        tagDict[tag.name] = tag.type
                     }
 
-                    // Save progress after each page
-                    tagDictFile.writeText(gson.toJson(tagDict))
-
-                    // If the first page contains no new tags, we can stop early.
                     if (page == 1 && !newTagsFoundInPage) {
-                        syncCompletedSuccessfully = true // Normal termination
+                        syncCompletedSuccessfully = true
                         break
                     }
 
                     page++
-                    delay(100) // Prevent rate-limiting
+                    delay(120)
                 }
 
-                // Step 3: Save the new last_id ONLY if the sync completed without errors
-                if (syncCompletedSuccessfully) {
+                // 👉【关键】只在最后一次写
+                if (syncCompletedSuccessfully && totalNewTags.isNotEmpty()) {
+
+                    TagTypeCache.addTags(context, totalNewTags)
+
                     firstNewId?.let {
-                        lastIdFile.writeText(it.toString())
+                        TagTypeCache.updateLastSyncedId(context, it)
                     }
                 }
 
             } finally {
+                TagTypeCache.flush(context)   // ← 新增这行
                 isSyncing.set(false)
             }
         }
