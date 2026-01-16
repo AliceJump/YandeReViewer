@@ -410,7 +410,7 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
         lifecycleScope.launch {
             // 1️⃣ 获取所有 release
             val allReleases = withContext(Dispatchers.IO) {
-                GitHubApiClient.api.getAllReleases("owner", "repo") // 替换成你自己的 GitHub 仓库
+                GitHubApiClient.api.getAllReleases("AliceJump", "YandeReViewer") // 替换成你自己的 GitHub 仓库
             }
 
             val currentVersion = BuildConfig.VERSION_NAME
