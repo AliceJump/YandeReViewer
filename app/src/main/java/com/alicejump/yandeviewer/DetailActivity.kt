@@ -1,5 +1,8 @@
 package com.alicejump.yandeviewer
 
+import android.content.ClipData
+import android.content.ClipboardManager
+import android.content.Context
 import android.content.Intent
 import android.graphics.Canvas
 import android.os.Bundle
@@ -302,6 +305,20 @@ class DetailActivity : AppCompatActivity() {
                     putExtra(MainActivity.NEW_SEARCH_TAG, tag)
                 }
                 startActivity(intent)
+            }
+            chip.setOnClickListener {
+                val intent = Intent(this@DetailActivity, MainActivity::class.java).apply {
+                    putExtra(MainActivity.NEW_SEARCH_TAG, tag)
+                }
+                startActivity(intent)
+            }
+            chip.setOnLongClickListener {
+                // 1️⃣ 复制到剪贴板
+                val clipboard = getSystemService(CLIPBOARD_SERVICE) as ClipboardManager
+                val clip = ClipData.newPlainText("tag", tag)
+                clipboard.setPrimaryClip(clip)
+                Toast.makeText(this, R.string.tag_copied_to_clipboard, Toast.LENGTH_SHORT).show()
+                true
             }
 
             when (type) {
