@@ -27,6 +27,7 @@
             android:name=".DetailActivity"
             android:hardwareAccelerated="true" />
         <activity android:name=".PhotoViewActivity" />
+        <activity android:name=".FavoritesActivity" />
 
         <provider
             android:name="androidx.core.content.FileProvider"

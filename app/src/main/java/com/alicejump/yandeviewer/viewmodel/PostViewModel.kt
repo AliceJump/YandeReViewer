@@ -14,14 +14,24 @@ import kotlinx.coroutines.flow.flatMapLatest
 class PostViewModel : ViewModel() {
 
     private val _query = MutableStateFlow("")
+    private val _refreshTrigger = MutableStateFlow(0)
 
-    val posts = _query.flatMapLatest { query ->
-        Pager(PagingConfig(pageSize = 20)) {
-            PostPagingSource(query)
-        }.flow
-    }.cachedIn(viewModelScope)
+    val posts = _query
+        .flatMapLatest { query ->
+            _refreshTrigger.flatMapLatest {
+                Pager(PagingConfig(pageSize = 20)) {
+                    PostPagingSource(query)
+                }.flow
+            }
+        }
+        .cachedIn(viewModelScope)
 
     fun search(query: String) {
         _query.value = query
     }
+
+    fun forceRefresh() {
+        _refreshTrigger.value += 1
+    }
 }
+

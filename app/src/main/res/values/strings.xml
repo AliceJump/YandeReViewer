@@ -31,4 +31,6 @@
     <string name="image_not_cached">Image not cached yet, please wait.</string>
     <string name="started_downloading">Started downloading…</string>
     <string name="tag_copied_to_clipboard">Tag copied to clipboard</string>
+    <string name="post_favorite">Post favorite</string>
+    <string name="post_unfavorited">Post unfavorited</string>
 </resources>

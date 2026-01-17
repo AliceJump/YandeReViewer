@@ -39,12 +39,16 @@ import androidx.core.view.GravityCompat
 import androidx.drawerlayout.widget.DrawerLayout
 import androidx.lifecycle.lifecycleScope
 import androidx.paging.ExperimentalPagingApi
+import androidx.paging.PagingData
 import androidx.recyclerview.widget.RecyclerView
 import androidx.recyclerview.widget.StaggeredGridLayoutManager
 import androidx.swiperefreshlayout.widget.SwipeRefreshLayout
 import com.alicejump.yandeviewer.adapter.PostAdapter
+import com.alicejump.yandeviewer.data.FavoritesManager
+import com.alicejump.yandeviewer.model.Post
 import com.alicejump.yandeviewer.network.GitHubApiClient
 import com.alicejump.yandeviewer.network.GitHubRelease
+import com.alicejump.yandeviewer.network.RetrofitClient
 import com.alicejump.yandeviewer.viewmodel.PostViewModel
 import com.alicejump.yandeviewer.viewmodel.TagTypeCache
 import com.alicejump.yandeviewer.viewmodel.UpdateCheckState
@@ -57,13 +61,13 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-
+import com.google.android.material.button.MaterialButton
 @OptIn(ExperimentalPagingApi::class)
 class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelectedListener {
 
     private lateinit var tagChipGroup: ChipGroup
     private lateinit var drawerLayout: DrawerLayout
-
+    private var favoriteSource: List<Post> = emptyList()
     private val selectedTags = linkedSetOf<String>()
 
     private val postViewModel by viewModels<PostViewModel>()
@@ -72,15 +76,25 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
 
     private lateinit var recyclerView: RecyclerView
     private lateinit var searchBox: AutoCompleteTextView
-    private lateinit var searchBtn: Button
-    private lateinit var ratingSCheckbox: CheckBox
-    private lateinit var ratingQCheckbox: CheckBox
-    private lateinit var ratingECheckbox: CheckBox
+
+
+
+    private lateinit var ratingSCheckbox: MaterialButton
+    private lateinit var ratingQCheckbox: MaterialButton
+    private lateinit var ratingECheckbox: MaterialButton
+
     private lateinit var swipeRefreshLayout: SwipeRefreshLayout
 
     private lateinit var tagCompletionAdapter: ArrayAdapter<String>
     private var allAvailableTags: List<String> = emptyList()
     private var downloadId: Long = 0
+
+    enum class FeedMode {
+        NORMAL,
+        FAVORITES
+    }
+
+    private var currentMode = FeedMode.NORMAL
 
     private val onDownloadComplete: BroadcastReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context, intent: Intent) {
@@ -156,7 +170,6 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
     private fun setupViews() {
         recyclerView = findViewById(R.id.recyclerView)
         searchBox = findViewById(R.id.searchBox)
-        searchBtn = findViewById(R.id.searchBtn)
         ratingSCheckbox = findViewById(R.id.rating_s_checkbox)
         ratingQCheckbox = findViewById(R.id.rating_q_checkbox)
         ratingECheckbox = findViewById(R.id.rating_e_checkbox)
@@ -164,15 +177,21 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
         tagChipGroup = findViewById(R.id.tagChipGroup)
 
         swipeRefreshLayout.setOnRefreshListener {
-            performSearch()      // 原来的搜索逻辑
-
-            postAdapter.refresh()  // 强制 Paging3 重新加载，即使 query 没变
+            when (currentMode) {
+                FeedMode.NORMAL -> {
+                    performSearch()
+                    postAdapter.refresh()
+                }
+                FeedMode.FAVORITES -> {
+                    switchToFavorites()
+                }
+            }
         }
+
 
     }
 
     private fun setupSearch() {
-        searchBtn.setOnClickListener { performSearch() }
 
         tagCompletionAdapter =
             ArrayAdapter(this, android.R.layout.simple_dropdown_item_1line, mutableListOf())
@@ -392,19 +411,79 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
     }
 
 
+    private fun filterFavorites(
+        source: List<Post>,
+        tags: List<String>
+    ): List<Post> {
+
+        if (tags.isEmpty()) return source
+
+        return source.filter { post ->
+
+            tags.all { tag ->
+
+                when {
+
+                    // rating 判断更健壮
+                    tag.startsWith("rating:") -> {
+                        val r = tag.removePrefix("rating:")
+                        post.rating.equals(r, ignoreCase = true)
+                    }
+
+                    // 普通 tag
+                    else -> {
+                        val postTags = post.tags.split(" ")
+                        postTags.contains(tag)
+                    }
+                }
+            }
+        }
+    }
     private fun performSearch() {
+
+        // 收键盘
         val imm = getSystemService(INPUT_METHOD_SERVICE) as InputMethodManager
         imm.hideSoftInputFromWindow(searchBox.windowToken, 0)
 
-        val tags = mutableListOf<String>()
-        tags += selectedTags
-        if (ratingSCheckbox.isChecked) tags += "rating:s"
-        if (ratingQCheckbox.isChecked) tags += "rating:q"
-        if (ratingECheckbox.isChecked) tags += "rating:e"
+        // 组装查询条件
+        val queryTags = mutableListOf<String>()
+        queryTags += selectedTags
 
-        postViewModel.search(tags.joinToString(" "))
-        recyclerView.scrollToPosition(0)
+        if (ratingSCheckbox.isChecked) queryTags += "rating:s"
+        if (ratingQCheckbox.isChecked) queryTags += "rating:q"
+        if (ratingECheckbox.isChecked) queryTags += "rating:e"
+
+        when (currentMode) {
+
+            // ───── 普通模式 ─────
+            FeedMode.NORMAL -> {
+                postViewModel.search(queryTags.joinToString(" "))
+                postViewModel.forceRefresh()
+            }
+
+            // ───── 收藏模式（纯本地）─────
+            FeedMode.FAVORITES -> {
+                lifecycleScope.launch {
+
+                    // 👉 每次都基于“完整收藏源”过滤，避免被上一次结果污染
+                    val all = FavoritesManager.getAll(this@MainActivity)
+
+                    val filtered = filterFavorites(all, queryTags)
+
+                    val data = if (filtered.isEmpty()) {
+                        PagingData.empty()
+                    } else {
+                        PagingData.from(filtered)
+                    }
+
+                    postAdapter.submitData(lifecycle, data)
+                    recyclerView.scrollToPosition(0)
+                }
+            }
+        }
     }
+
+
 
     private fun showUpdateDialog(latestRelease: GitHubRelease) {
         lifecycleScope.launch {
@@ -518,27 +597,80 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
     override fun onNavigationItemSelected(item: MenuItem): Boolean {
         when (item.itemId) {
             R.id.nav_favorite_tags -> Toast.makeText(this, R.string.favorite_tags_clicked, Toast.LENGTH_SHORT).show()
-            R.id.nav_favorite_images -> Toast.makeText(this, R.string.favorite_images_clicked, Toast.LENGTH_SHORT).show()
+            R.id.nav_favorite_images -> {
+                switchToFavorites()
+            }
+
             R.id.nav_blacklist_tags -> Toast.makeText(this, R.string.blacklist_tags_clicked, Toast.LENGTH_SHORT).show()
             R.id.nav_history -> Toast.makeText(this, R.string.history_clicked, Toast.LENGTH_SHORT).show()
         }
         drawerLayout.closeDrawer(GravityCompat.START)
         return true
     }
+    private fun switchToNormalMode() {
+
+        currentMode = FeedMode.NORMAL
+        supportActionBar?.title = getString(R.string.app_name)
+
+        performSearch()
+    }
+
+
+
+
+    private fun switchToFavorites() {
+        currentMode = FeedMode.FAVORITES
+        supportActionBar?.title = "我的收藏"
+
+        lifecycleScope.launch {
+
+            // 👉 直接拿完整 Post
+            val allFavorites = FavoritesManager.getAll(this@MainActivity)
+
+            if (allFavorites.isEmpty()) {
+                postAdapter.submitData(PagingData.empty())
+                return@launch
+            }
+
+            // 👉 直接按收藏时间排序
+            val sorted = allFavorites.sortedByDescending { it.favoriteAt }
+
+            // 👉 作为当前“数据源”
+            favoriteSource = sorted
+
+            postAdapter.submitData(
+                PagingData.from(sorted)
+            )
+        }
+    }
+
+
 
     @Deprecated("This method has been deprecated in favor of using the\n      {@link OnBackPressedDispatcher} via {@link #getOnBackPressedDispatcher()}.\n      The OnBackPressedDispatcher controls how back button events are dispatched\n      to one or more {@link OnBackPressedCallback} objects.")
     @SuppressLint("GestureBackNavigation")
     override fun onBackPressed() {
+
+        // 1️⃣ 侧边栏优先关闭
         if (drawerLayout.isDrawerOpen(GravityCompat.START)) {
             drawerLayout.closeDrawer(GravityCompat.START)
             return
         }
 
+        // 2️⃣ 如果在多选状态 → 先取消多选
         if (postAdapter.isSelectionActive()) {
             postAdapter.clearSelection()
             hideSelectionMenu()
             return
         }
+
+        // 3️⃣ 👉 重点：如果当前是收藏模式 → 回到普通模式
+        if (currentMode == FeedMode.FAVORITES) {
+            switchToNormalMode()   // 你应该已经有这个方法
+            return
+        }
+
+        // 4️⃣ 其他情况才是真正的“退出页面”
         super.onBackPressed()
     }
+
 }

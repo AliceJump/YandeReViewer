@@ -48,39 +48,66 @@
                 app:singleLine="true"
                 app:chipSpacing="6dp"/>
         </HorizontalScrollView>
-
-
-        <!-- 原来的按钮和评分 -->
-        <LinearLayout
+        <HorizontalScrollView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:gravity="center_vertical">
+            android:paddingHorizontal="12dp"
+            android:scrollbars="none"
+            android:fillViewport="true">
 
-            <Button
-                android:id="@+id/searchBtn"
+            <LinearLayout
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="@string/search_button_text" />
+                android:orientation="horizontal"
+                android:gravity="center_horizontal">
 
-            <CheckBox
-                android:id="@+id/rating_s_checkbox"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="@string/rating_s" />
+                <!-- S -->
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/rating_s_checkbox"
+                    style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                    android:layout_width="wrap_content"
+                    android:layout_height="40dp"
+                    android:layout_marginEnd="8dp"
+                    android:text="@string/rating_s"
+                    android:checkable="true"
+                    android:singleLine="true"
+                    android:ellipsize="none"
+                    app:cornerRadius="20dp"
+                    app:checkedIcon="@drawable/ic_check"
+                    app:iconGravity="textStart"/>
 
-            <CheckBox
-                android:id="@+id/rating_q_checkbox"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="@string/rating_q" />
+                <!-- Q -->
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/rating_q_checkbox"
+                    style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                    android:layout_width="wrap_content"
+                    android:layout_height="40dp"
+                    android:layout_marginEnd="8dp"
+                    android:text="@string/rating_q"
+                    android:checkable="true"
+                    android:singleLine="true"
+                    android:ellipsize="none"
+                    app:cornerRadius="20dp"
+                    app:checkedIcon="@drawable/ic_check"
+                    app:iconGravity="textStart"/>
 
-            <CheckBox
-                android:id="@+id/rating_e_checkbox"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="@string/rating_e" />
-        </LinearLayout>
+                <!-- E -->
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/rating_e_checkbox"
+                    style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                    android:layout_width="wrap_content"
+                    android:layout_height="40dp"
+                    android:text="@string/rating_e"
+                    android:checkable="true"
+                    android:singleLine="true"
+                    android:ellipsize="none"
+                    app:cornerRadius="20dp"
+                    app:checkedIcon="@drawable/ic_check"
+                    app:iconGravity="textStart"/>
+            </LinearLayout>
+        </HorizontalScrollView>
+
+
 
         <androidx.swiperefreshlayout.widget.SwipeRefreshLayout
             android:id="@+id/swipeRefreshLayout"
