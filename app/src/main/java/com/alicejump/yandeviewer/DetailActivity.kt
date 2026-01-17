@@ -24,10 +24,12 @@ import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.RecyclerView
 import androidx.viewpager2.widget.ViewPager2
 import com.alicejump.yandeviewer.adapter.ImagePagerAdapter
+import com.alicejump.yandeviewer.data.FavoritesManager
 import com.alicejump.yandeviewer.model.Post
 import com.alicejump.yandeviewer.viewmodel.TagTypeCache
 import com.google.android.material.chip.Chip
 import com.google.android.material.chip.ChipGroup
+import com.google.android.material.floatingactionbutton.FloatingActionButton
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 
@@ -36,6 +38,7 @@ class DetailActivity : AppCompatActivity() {
     private lateinit var viewPager: ViewPager2
     private lateinit var imagePagerAdapter: ImagePagerAdapter
     private lateinit var sourceButton: Button
+    private lateinit var favoriteFab: FloatingActionButton
 
     // Labels
     private lateinit var artistLabel: TextView
@@ -177,6 +180,7 @@ class DetailActivity : AppCompatActivity() {
 
         viewPager = findViewById(R.id.viewPager)
         sourceButton = findViewById(R.id.source_button)
+        favoriteFab = findViewById(R.id.fab_favorite)
 
         // Init Labels
         artistLabel = findViewById(R.id.artist_label)
@@ -211,6 +215,33 @@ class DetailActivity : AppCompatActivity() {
         viewPager.adapter = imagePagerAdapter
         viewPager.transitionName = transitionName
 
+        favoriteFab.setOnClickListener {
+            val currentPost = posts[viewPager.currentItem]
+
+            if (FavoritesManager.isFavorite(this, currentPost.id)) {
+
+                FavoritesManager.removeFavorite(this, currentPost.id)
+
+                Toast.makeText(this,
+                    R.string.post_unfavorited,
+                    Toast.LENGTH_SHORT
+                ).show()
+
+            } else {
+
+                // 👉 重点：直接存完整对象
+                FavoritesManager.addFavorite(this, currentPost)
+
+                Toast.makeText(this,
+                    R.string.post_favorite,
+                    Toast.LENGTH_SHORT
+                ).show()
+            }
+
+            updateFavoriteButton(currentPost)
+        }
+
+
         // This collector will automatically update the UI whenever the tag cache changes.
         lifecycleScope.launch {
             TagTypeCache.tagTypes.collectLatest { _ ->
@@ -235,6 +266,14 @@ class DetailActivity : AppCompatActivity() {
         viewPager.post { startPostponedEnterTransition() }
     }
 
+    private fun updateFavoriteButton(post: Post) {
+        if (FavoritesManager.isFavorite(this, post.id)) {
+            favoriteFab.setImageResource(android.R.drawable.star_on)
+        } else {
+            favoriteFab.setImageResource(android.R.drawable.star_off)
+        }
+    }
+
     private fun updateUiForPosition(position: Int, posts: List<Post>) {
         val currentPost = posts[position]
         val tagsToFetch = currentPost.tags.split(" ").toSet()
@@ -242,6 +281,7 @@ class DetailActivity : AppCompatActivity() {
         // Immediately render the page with currently cached data.
         setupTags(tagsToFetch, TagTypeCache.tagTypes.value)
         setupSourceButton(currentPost)
+        updateFavoriteButton(currentPost)
 
         // Then, request any missing tags (if any).
         if (tagsToFetch.isNotEmpty()) {

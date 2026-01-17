@@ -2,7 +2,9 @@ package com.alicejump.yandeviewer.network
 
 import com.alicejump.yandeviewer.model.Post
 import com.alicejump.yandeviewer.model.TagInfo
+import retrofit2.Response
 import retrofit2.http.GET
+import retrofit2.http.Path
 import retrofit2.http.Query
 
 interface YandeApi {
@@ -24,4 +26,7 @@ interface YandeApi {
         @Query("limit") limit: Int = 2000, // As per your logic
         @Query("order") order: String = "date"
     ): List<TagInfo>
+
+    @GET("post.json?tags=id:{id}")
+    suspend fun getPost(@Path("id") id: String): Response<List<Post>>
 }
