@@ -33,20 +33,22 @@ import com.google.android.material.floatingactionbutton.FloatingActionButton
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 
+// 详情页 Activity，用于查看单张图片、标签、来源信息，并可进行收藏
 class DetailActivity : AppCompatActivity() {
 
+    // UI 元素
     private lateinit var viewPager: ViewPager2
     private lateinit var imagePagerAdapter: ImagePagerAdapter
     private lateinit var sourceButton: Button
     private lateinit var favoriteFab: FloatingActionButton
 
-    // Labels
+    // 标签的标题
     private lateinit var artistLabel: TextView
     private lateinit var copyrightLabel: TextView
     private lateinit var characterLabel: TextView
     private lateinit var generalLabel: TextView
 
-    // Chip Groups
+    // ChipGroup 用于显示不同类型标签
     private lateinit var artistTagsContainer: ChipGroup
     private lateinit var copyrightTagsContainer: ChipGroup
     private lateinit var characterTagsContainer: ChipGroup
@@ -55,6 +57,9 @@ class DetailActivity : AppCompatActivity() {
     private var firstVisiblePosition: Int = -1
     private var lastVisiblePosition: Int = -1
 
+    // ====== 共享元素动画辅助函数 ======
+
+    // 创建源 View 的快照，用于动画 Overlay
     private fun createSnapshotView(source: View): View {
         val bitmap = createBitmap(source.width, source.height)
         val canvas = Canvas(bitmap)
@@ -66,6 +71,7 @@ class DetailActivity : AppCompatActivity() {
         }
     }
 
+    // 将快照加入屏幕 Overlay，用于自定义动画
     private fun addToOverlay(source: View): View {
         val decorView = window.decorView as ViewGroup
         val snapshot = createSnapshotView(source)
@@ -85,14 +91,14 @@ class DetailActivity : AppCompatActivity() {
         return snapshot
     }
 
-
-
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_detail)
-        // Postpone the shared element transition.
+
+        // 延迟共享元素过渡，等 View 加载完成
         postponeEnterTransition()
 
+        // ===== 处理返回按钮行为，包括自定义动画 =====
         onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
             override fun handleOnBackPressed() {
                 val currentPosition = viewPager.currentItem
@@ -104,6 +110,7 @@ class DetailActivity : AppCompatActivity() {
                 setResult(RESULT_OK, resultIntent)
 
                 if (isOnScreen) {
+                    // 如果图片在屏幕内，正常共享元素返回
                     finishAfterTransition()
                     return
                 }
@@ -126,9 +133,6 @@ class DetailActivity : AppCompatActivity() {
                 val isAbove = currentPosition < firstVisiblePosition
                 val isLeft = currentPosition % 2 == 0
 
-                resources.displayMetrics.widthPixels.toFloat()
-                resources.displayMetrics.heightPixels.toFloat()
-
                 if (isAbove) {
                     // —— 上方：缩向左上 / 右上（基于 View 自身）——
                     imageView.pivotX = if (isLeft) 0f else imageView.width.toFloat()
@@ -146,8 +150,7 @@ class DetailActivity : AppCompatActivity() {
                         .start()
 
                 } else {
-                    // —— 下方：使用屏幕级 Overlay 飞向左下 / 右下 ——
-
+                    // —— 下方：屏幕级 Overlay 飞出动画 ——
                     val decorView = window.decorView as ViewGroup
                     val snapshot = addToOverlay(imageView)
 
@@ -172,28 +175,30 @@ class DetailActivity : AppCompatActivity() {
                         }
                         .start()
                 }
-
             }
         })
 
+        // 显示 ActionBar 返回箭头
         supportActionBar?.setDisplayHomeAsUpEnabled(true)
 
+        // ====== 初始化 UI 元素 ======
         viewPager = findViewById(R.id.viewPager)
         sourceButton = findViewById(R.id.source_button)
         favoriteFab = findViewById(R.id.fab_favorite)
 
-        // Init Labels
+        // 标签标题
         artistLabel = findViewById(R.id.artist_label)
         copyrightLabel = findViewById(R.id.copyright_label)
         characterLabel = findViewById(R.id.character_label)
         generalLabel = findViewById(R.id.general_label)
 
-        // Init ChipGroups
+        // ChipGroup 容器
         artistTagsContainer = findViewById(R.id.artist_tags_container)
         copyrightTagsContainer = findViewById(R.id.copyright_tags_container)
         characterTagsContainer = findViewById(R.id.character_tags_container)
         generalTagsContainer = findViewById(R.id.general_tags_container)
 
+        // 获取 Intent 数据
         val posts = if (android.os.Build.VERSION.SDK_INT >= 33) {
             intent.getParcelableArrayListExtra("posts", Post::class.java)
         } else {
@@ -211,45 +216,36 @@ class DetailActivity : AppCompatActivity() {
             return
         }
 
+        // ====== 初始化 ViewPager ======
         imagePagerAdapter = ImagePagerAdapter(posts)
         viewPager.adapter = imagePagerAdapter
         viewPager.transitionName = transitionName
 
+        // ====== 收藏按钮逻辑 ======
         favoriteFab.setOnClickListener {
             val currentPost = posts[viewPager.currentItem]
 
             if (FavoritesManager.isFavorite(this, currentPost.id)) {
-
+                // 已收藏 -> 取消收藏
                 FavoritesManager.removeFavorite(this, currentPost.id)
-
-                Toast.makeText(this,
-                    R.string.post_unfavorited,
-                    Toast.LENGTH_SHORT
-                ).show()
-
+                Toast.makeText(this, R.string.post_unfavorited, Toast.LENGTH_SHORT).show()
             } else {
-
-                // 👉 重点：直接存完整对象
+                // 未收藏 -> 添加收藏（存完整对象）
                 FavoritesManager.addFavorite(this, currentPost)
-
-                Toast.makeText(this,
-                    R.string.post_favorite,
-                    Toast.LENGTH_SHORT
-                ).show()
+                Toast.makeText(this, R.string.post_favorite, Toast.LENGTH_SHORT).show()
             }
 
             updateFavoriteButton(currentPost)
         }
 
-
-        // This collector will automatically update the UI whenever the tag cache changes.
+        // ====== 标签缓存更新监听 ======
         lifecycleScope.launch {
             TagTypeCache.tagTypes.collectLatest { _ ->
                 updateUiForPosition(viewPager.currentItem, posts)
             }
         }
 
-        // This callback handles the user swiping between pages.
+        // ====== ViewPager 页面切换监听 ======
         viewPager.registerOnPageChangeCallback(object : ViewPager2.OnPageChangeCallback() {
             override fun onPageSelected(position: Int) {
                 super.onPageSelected(position)
@@ -257,15 +253,15 @@ class DetailActivity : AppCompatActivity() {
             }
         })
 
+        // 设置初始显示页面
         viewPager.setCurrentItem(position, false)
-
-        // Manually trigger the setup for the initial item, as onPageSelected isn't called for it.
         updateUiForPosition(position, posts)
 
-        // Start the transition after the view has been laid out.
+        // 启动共享元素过渡
         viewPager.post { startPostponedEnterTransition() }
     }
 
+    // 更新收藏按钮状态
     private fun updateFavoriteButton(post: Post) {
         if (FavoritesManager.isFavorite(this, post.id)) {
             favoriteFab.setImageResource(android.R.drawable.star_on)
@@ -274,16 +270,17 @@ class DetailActivity : AppCompatActivity() {
         }
     }
 
+    // 根据当前页面更新 UI：标签、来源、收藏状态
     private fun updateUiForPosition(position: Int, posts: List<Post>) {
         val currentPost = posts[position]
         val tagsToFetch = currentPost.tags.split(" ").toSet()
 
-        // Immediately render the page with currently cached data.
+        // 立即渲染当前缓存的标签
         setupTags(tagsToFetch, TagTypeCache.tagTypes.value)
         setupSourceButton(currentPost)
         updateFavoriteButton(currentPost)
 
-        // Then, request any missing tags (if any).
+        // 请求尚未获取的标签
         if (tagsToFetch.isNotEmpty()) {
             TagTypeCache.prioritizeTags(this, tagsToFetch)
         }
@@ -299,6 +296,7 @@ class DetailActivity : AppCompatActivity() {
         return super.onOptionsItemSelected(item)
     }
 
+    // 设置来源按钮逻辑
     private fun setupSourceButton(currentPost: Post) {
         val source = currentPost.source
         if (source.isNullOrBlank()) {
@@ -307,6 +305,7 @@ class DetailActivity : AppCompatActivity() {
             sourceButton.visibility = View.VISIBLE
             sourceButton.setOnClickListener {
                 if (Patterns.WEB_URL.matcher(source).matches()) {
+                    // 打开网页
                     var url = source
                     if (!url.startsWith("http://") && !url.startsWith("https://")) {
                         url = "https://$url"
@@ -314,6 +313,7 @@ class DetailActivity : AppCompatActivity() {
                     val intent = Intent(Intent.ACTION_VIEW, url.toUri())
                     startActivity(intent)
                 } else {
+                    // 弹窗显示文本来源
                     AlertDialog.Builder(this)
                         .setTitle(R.string.detail_source_button_text)
                         .setMessage(source)
@@ -324,14 +324,16 @@ class DetailActivity : AppCompatActivity() {
         }
     }
 
+    // 设置标签显示逻辑
     private fun setupTags(currentPostTags: Set<String>, allTagTypes: Map<String, Int>) {
+        // 清空旧标签
         artistTagsContainer.removeAllViews()
         copyrightTagsContainer.removeAllViews()
         characterTagsContainer.removeAllViews()
         generalTagsContainer.removeAllViews()
 
         currentPostTags.forEach { tag ->
-            val type = allTagTypes[tag] ?: -1 // Use -1 for tags not yet fetched
+            val type = allTagTypes[tag] ?: -1 // 未获取的标签类型为 -1
 
             val chip = Chip(this).apply {
                 text = tag
@@ -339,20 +341,16 @@ class DetailActivity : AppCompatActivity() {
                 isFocusable = true
             }
 
+            // 点击 -> 跳转 MainActivity 搜索该标签
             chip.setOnClickListener {
                 val intent = Intent(this@DetailActivity, MainActivity::class.java).apply {
                     putExtra(MainActivity.NEW_SEARCH_TAG, tag)
                 }
                 startActivity(intent)
             }
-            chip.setOnClickListener {
-                val intent = Intent(this@DetailActivity, MainActivity::class.java).apply {
-                    putExtra(MainActivity.NEW_SEARCH_TAG, tag)
-                }
-                startActivity(intent)
-            }
+
+            // 长按 -> 复制到剪贴板
             chip.setOnLongClickListener {
-                // 1️⃣ 复制到剪贴板
                 val clipboard = getSystemService(CLIPBOARD_SERVICE) as ClipboardManager
                 val clip = ClipData.newPlainText("tag", tag)
                 clipboard.setPrimaryClip(clip)
@@ -360,28 +358,32 @@ class DetailActivity : AppCompatActivity() {
                 true
             }
 
+            // 根据标签类型添加到对应 ChipGroup
             when (type) {
-                1 -> artistTagsContainer.addView(chip) // Artist
-                3 -> copyrightTagsContainer.addView(chip) // Copyright
-                4 -> characterTagsContainer.addView(chip) // Character
-                else -> generalTagsContainer.addView(chip) // Includes general (0) and not-yet-fetched (-1)
+                1 -> artistTagsContainer.addView(chip)
+                3 -> copyrightTagsContainer.addView(chip)
+                4 -> characterTagsContainer.addView(chip)
+                else -> generalTagsContainer.addView(chip)
             }
         }
 
-        // Hide label and container if they are empty
+        // 更新标签组可见性
         updateGroupVisibility(artistLabel, artistTagsContainer)
         updateGroupVisibility(copyrightLabel, copyrightTagsContainer)
         updateGroupVisibility(characterLabel, characterTagsContainer)
         updateGroupVisibility(generalLabel, generalTagsContainer)
     }
 
+    // 更新标签组和标题可见性
     private fun updateGroupVisibility(label: TextView, group: ChipGroup) {
         val visibility = if (group.children.count() > 0) View.VISIBLE else View.GONE
         label.visibility = visibility
         group.visibility = visibility
     }
+
     override fun onStop() {
         super.onStop()
+        // 页面关闭时刷新缓存
         TagTypeCache.flush(this)
     }
 
