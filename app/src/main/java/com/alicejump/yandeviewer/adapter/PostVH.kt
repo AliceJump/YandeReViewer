@@ -1,7 +1,6 @@
 package com.alicejump.yandeviewer.adapter
 
 import android.view.View
-import android.widget.CheckBox
 import android.widget.ImageView
 import androidx.constraintlayout.widget.ConstraintLayout
 import androidx.core.view.isVisible
@@ -12,7 +11,7 @@ import com.alicejump.yandeviewer.model.Post
 
 class PostVH(view: View) : RecyclerView.ViewHolder(view) {
     private val imageView: ImageView = view.findViewById(R.id.postImage)
-    private val checkbox: CheckBox = view.findViewById(R.id.checkbox)
+    private val selectionOverlay: View = view.findViewById(R.id.selectionOverlay)
 
     fun bind(post: Post, isSelectionMode: Boolean, isSelected: Boolean) {
         // Set the aspect ratio to prevent image jumping
@@ -23,8 +22,9 @@ class PostVH(view: View) : RecyclerView.ViewHolder(view) {
         imageView.load(post.preview_url) {
             allowHardware(false)
         }
-        checkbox.isVisible = isSelectionMode
-        checkbox.isChecked = isSelected
+
+        // Show overlay when selected, hide when not
+        selectionOverlay.isVisible = isSelected
     }
 
     fun getImageView(): ImageView {

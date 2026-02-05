@@ -33,4 +33,6 @@
     <string name="tag_copied_to_clipboard">标签已复制到剪贴板</string>
     <string name="post_favorite">已收藏</string>
     <string name="post_unfavorited">已取消收藏</string>
+    <string name="scroll_to_top">回到顶部</string>
+    <string name="refresh">刷新</string>
 </resources>

@@ -72,7 +72,7 @@ class ImagePagerAdapter(private val posts: List<Post>) : RecyclerView.Adapter<Im
             // 手势拖拽、长按与点击逻辑
             val handler = Handler(Looper.getMainLooper())
             var isDragging = false
-            var downTime = 0L
+            var downTime = 100L
             var startX = 0f
             var startY = 0f
             val dragTriggerDelayMillis = 1000L // 触发拖拽的延迟时间（1秒）
@@ -150,6 +150,7 @@ class ImagePagerAdapter(private val posts: List<Post>) : RecyclerView.Adapter<Im
             val fileName = "yande.re_${post.id}.$extension".replace("[^a-zA-Z0-9._-]".toRegex(), "_")
 
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                Toast.makeText(context, "Started downloading", Toast.LENGTH_SHORT).show()
                 // Android 10 及以上使用 MediaStore API
                 CoroutineScope(Dispatchers.IO).launch {
                     try {

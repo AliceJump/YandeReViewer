@@ -9,7 +9,6 @@ import android.util.Patterns
 import android.view.MenuItem
 import android.view.View
 import android.view.ViewGroup
-import android.widget.Button
 import android.widget.FrameLayout
 import android.widget.ImageView
 import android.widget.TextView
@@ -39,7 +38,7 @@ class DetailActivity : AppCompatActivity() {
     // UI 元素
     private lateinit var viewPager: ViewPager2
     private lateinit var imagePagerAdapter: ImagePagerAdapter
-    private lateinit var sourceButton: Button
+    private lateinit var sourceFab: FloatingActionButton
     private lateinit var favoriteFab: FloatingActionButton
 
     // 标签的标题
@@ -183,7 +182,7 @@ class DetailActivity : AppCompatActivity() {
 
         // ====== 初始化 UI 元素 ======
         viewPager = findViewById(R.id.viewPager)
-        sourceButton = findViewById(R.id.source_button)
+        sourceFab = findViewById(R.id.fab_source)
         favoriteFab = findViewById(R.id.fab_favorite)
 
         // 标签标题
@@ -300,10 +299,10 @@ class DetailActivity : AppCompatActivity() {
     private fun setupSourceButton(currentPost: Post) {
         val source = currentPost.source
         if (source.isNullOrBlank()) {
-            sourceButton.visibility = View.GONE
+            sourceFab.hide()
         } else {
-            sourceButton.visibility = View.VISIBLE
-            sourceButton.setOnClickListener {
+            sourceFab.show()
+            sourceFab.setOnClickListener {
                 if (Patterns.WEB_URL.matcher(source).matches()) {
                     // 打开网页
                     var url = source

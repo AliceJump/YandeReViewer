@@ -27,7 +27,7 @@ class PostAdapter(
         val oldSelected = selectedItems.toList()
         selectedItems.clear()
         isSelectionMode = false
-        // 刷新被选中的 item，让勾选框消失
+        // 只需刷新之前选中的项目以移除遮罩层
         oldSelected.forEach { post ->
             val pos = snapshot().items.indexOf(post)
             if (pos != -1) notifyItemChanged(pos)
@@ -47,8 +47,15 @@ class PostAdapter(
 
     /** 切换某个 item 的选中状态 */
     private fun toggleSelection(post: Post, position: Int) {
-        if (selectedItems.contains(post)) selectedItems.remove(post)
-        else selectedItems.add(post)
+        if (selectedItems.contains(post)) {
+            selectedItems.remove(post)
+            // 如果取消选择后没有任何选中项，退出多选模式
+            if (selectedItems.isEmpty()) {
+                isSelectionMode = false
+            }
+        } else {
+            selectedItems.add(post)
+        }
         notifyItemChanged(position)
         onSelectionChange(selectedItems.size)
     }
@@ -56,7 +63,7 @@ class PostAdapter(
     override fun onBindViewHolder(holder: PostVH, position: Int) {
         val post = getItem(position) ?: return
 
-        // 显示勾选框
+        // 显示选中遮罩层
         holder.bind(post, isSelectionMode, selectedItems.contains(post))
 
         holder.itemView.setOnClickListener {

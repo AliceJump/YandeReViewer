@@ -25,6 +25,7 @@ import android.widget.AutoCompleteTextView
 import android.widget.Button
 import android.widget.CheckBox
 import android.widget.Toast
+import androidx.activity.OnBackPressedCallback
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
 import androidx.appcompat.app.ActionBarDrawerToggle
@@ -57,6 +58,7 @@ import com.github.chrisbanes.photoview.BuildConfig
 import com.google.android.material.chip.Chip
 import com.google.android.material.chip.ChipGroup
 import com.google.android.material.navigation.NavigationView
+import com.google.android.material.floatingactionbutton.FloatingActionButton
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
@@ -84,6 +86,8 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
     private lateinit var ratingECheckbox: MaterialButton
 
     private lateinit var swipeRefreshLayout: SwipeRefreshLayout
+    private lateinit var fabScrollToTop: FloatingActionButton
+    private lateinit var fabRefresh: FloatingActionButton
 
     private lateinit var tagCompletionAdapter: ArrayAdapter<String>
     private var allAvailableTags: List<String> = emptyList()
@@ -150,6 +154,7 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
         setupViews()
         setupRecyclerView()
         setupSearch()
+        setupBackPressedHandler()
         observeViewModels()
 
         lifecycleScope.launch {
@@ -175,8 +180,26 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
         ratingECheckbox = findViewById(R.id.rating_e_checkbox)
         swipeRefreshLayout = findViewById(R.id.swipeRefreshLayout)
         tagChipGroup = findViewById(R.id.tagChipGroup)
+        fabScrollToTop = findViewById(R.id.fab_scroll_to_top)
+        fabRefresh = findViewById(R.id.fab_refresh)
 
         swipeRefreshLayout.setOnRefreshListener {
+            when (currentMode) {
+                FeedMode.NORMAL -> {
+                    performSearch()
+                    postAdapter.refresh()
+                }
+                FeedMode.FAVORITES -> {
+                    switchToFavorites()
+                }
+            }
+        }
+
+        fabScrollToTop.setOnClickListener {
+            recyclerView.smoothScrollToPosition(0)
+        }
+
+        fabRefresh.setOnClickListener {
             when (currentMode) {
                 FeedMode.NORMAL -> {
                     performSearch()
@@ -272,6 +295,27 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
         recyclerView.layoutManager =
             StaggeredGridLayoutManager(2, StaggeredGridLayoutManager.VERTICAL)
         recyclerView.adapter = postAdapter
+
+        // 添加滚动监听器来控制浮动按钮的显示/隐藏
+        recyclerView.addOnScrollListener(object : RecyclerView.OnScrollListener() {
+            override fun onScrolled(recyclerView: RecyclerView, dx: Int, dy: Int) {
+                super.onScrolled(recyclerView, dx, dy)
+
+                val layoutManager = recyclerView.layoutManager as StaggeredGridLayoutManager
+                val firstVisiblePositions = IntArray(layoutManager.spanCount)
+                layoutManager.findFirstVisibleItemPositions(firstVisiblePositions)
+                val firstVisible = firstVisiblePositions.minOrNull() ?: 0
+
+                // 如果不在顶部（第一个可见项 > 0），显示按钮
+                if (firstVisible > 0) {
+                    fabScrollToTop.show()
+                    fabRefresh.show()
+                } else {
+                    fabScrollToTop.hide()
+                    fabRefresh.hide()
+                }
+            }
+        })
     }
 
     override fun onCreateOptionsMenu(menu: Menu): Boolean {
@@ -594,6 +638,11 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
         TagTypeCache.flush(this)
     }
 
+    override fun onTrimMemory(level: Int) {
+        super.onTrimMemory(level)
+        TagTypeCache.flush(this)
+    }
+
     override fun onNavigationItemSelected(item: MenuItem): Boolean {
         when (item.itemId) {
             R.id.nav_favorite_tags -> Toast.makeText(this, R.string.favorite_tags_clicked, Toast.LENGTH_SHORT).show()
@@ -644,33 +693,33 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
         }
     }
 
+    private fun setupBackPressedHandler() {
+        onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
+            override fun handleOnBackPressed() {
+                // 1️⃣ 侧边栏优先关闭
+                if (drawerLayout.isDrawerOpen(GravityCompat.START)) {
+                    drawerLayout.closeDrawer(GravityCompat.START)
+                    return
+                }
 
+                // 2️⃣ 如果在多选状态 → 先取消多选
+                if (postAdapter.isSelectionActive()) {
+                    postAdapter.clearSelection()
+                    hideSelectionMenu()
+                    return
+                }
 
-    @Deprecated("This method has been deprecated in favor of using the\n      {@link OnBackPressedDispatcher} via {@link #getOnBackPressedDispatcher()}.\n      The OnBackPressedDispatcher controls how back button events are dispatched\n      to one or more {@link OnBackPressedCallback} objects.")
-    @SuppressLint("GestureBackNavigation")
-    override fun onBackPressed() {
+                // 3️⃣ 👉 重点：如果当前是收藏模式 → 回到普通模式
+                if (currentMode == FeedMode.FAVORITES) {
+                    switchToNormalMode()
+                    return
+                }
 
-        // 1️⃣ 侧边栏优先关闭
-        if (drawerLayout.isDrawerOpen(GravityCompat.START)) {
-            drawerLayout.closeDrawer(GravityCompat.START)
-            return
-        }
-
-        // 2️⃣ 如果在多选状态 → 先取消多选
-        if (postAdapter.isSelectionActive()) {
-            postAdapter.clearSelection()
-            hideSelectionMenu()
-            return
-        }
-
-        // 3️⃣ 👉 重点：如果当前是收藏模式 → 回到普通模式
-        if (currentMode == FeedMode.FAVORITES) {
-            switchToNormalMode()   // 你应该已经有这个方法
-            return
-        }
-
-        // 4️⃣ 其他情况才是真正的“退出页面”
-        super.onBackPressed()
+                // 4️⃣ 其他情况才是真正的"退出页面"
+                isEnabled = false
+                onBackPressedDispatcher.onBackPressed()
+            }
+        })
     }
 
 }

@@ -11,14 +11,15 @@
         android:layout_width="0dp"
         android:layout_height="0dp"
         app:layout_constraintTop_toTopOf="parent"
-        app:layout_constraintBottom_toTopOf="@+id/source_button"
+        app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent">
 
         <androidx.constraintlayout.widget.ConstraintLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:padding="8dp">
+            android:padding="8dp"
+            android:paddingBottom="80dp">
 
             <androidx.viewpager2.widget.ViewPager2
                 android:id="@+id/viewPager"
@@ -112,23 +113,27 @@
         </androidx.constraintlayout.widget.ConstraintLayout>
     </androidx.core.widget.NestedScrollView>
 
-    <Button
-        android:id="@+id/source_button"
+    <!-- 来源按钮 (左下角小型FAB) -->
+    <com.google.android.material.floatingactionbutton.FloatingActionButton
+        android:id="@+id/fab_source"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="@string/detail_source_button_text"
+        android:layout_margin="16dp"
+        android:visibility="gone"
+        app:fabSize="mini"
+        app:srcCompat="@android:drawable/ic_menu_info_details"
+        android:contentDescription="@string/detail_source_button_text"
         app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        android:layout_marginStart="8dp"
-        android:layout_marginBottom="8dp"
-        android:visibility="gone"/>
+        app:layout_constraintStart_toStartOf="parent" />
 
+    <!-- 收藏按钮 (右下角普通FAB) -->
     <com.google.android.material.floatingactionbutton.FloatingActionButton
         android:id="@+id/fab_favorite"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_margin="16dp"
         app:srcCompat="@android:drawable/star_off"
+        android:contentDescription="@string/post_favorite"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent" />
 
