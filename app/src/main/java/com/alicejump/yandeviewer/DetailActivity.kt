@@ -56,6 +56,11 @@ class DetailActivity : AppCompatActivity() {
     private var firstVisiblePosition: Int = -1
     private var lastVisiblePosition: Int = -1
 
+    // 保存从 MainActivity 传来的复选框状态
+    private var ratingSState: Boolean = false
+    private var ratingQState: Boolean = false
+    private var ratingEState: Boolean = false
+
     // ====== 共享元素动画辅助函数 ======
 
     // 创建源 View 的快照，用于动画 Overlay
@@ -209,6 +214,11 @@ class DetailActivity : AppCompatActivity() {
         lastVisiblePosition = intent.getIntExtra("last_visible_position", -1)
         val transitionName = intent.getStringExtra("transition_name")
 
+        // 获取复选框状态
+        ratingSState = intent.getBooleanExtra(MainActivity.EXTRA_RATING_S, false)
+        ratingQState = intent.getBooleanExtra(MainActivity.EXTRA_RATING_Q, false)
+        ratingEState = intent.getBooleanExtra(MainActivity.EXTRA_RATING_E, false)
+
         if (posts == null) {
             Toast.makeText(this, R.string.detail_posts_not_found, Toast.LENGTH_SHORT).show()
             finish()
@@ -344,6 +354,10 @@ class DetailActivity : AppCompatActivity() {
             chip.setOnClickListener {
                 val intent = Intent(this@DetailActivity, MainActivity::class.java).apply {
                     putExtra(MainActivity.NEW_SEARCH_TAG, tag)
+                    // 传递复选框状态
+                    putExtra(MainActivity.EXTRA_RATING_S, ratingSState)
+                    putExtra(MainActivity.EXTRA_RATING_Q, ratingQState)
+                    putExtra(MainActivity.EXTRA_RATING_E, ratingEState)
                 }
                 startActivity(intent)
             }

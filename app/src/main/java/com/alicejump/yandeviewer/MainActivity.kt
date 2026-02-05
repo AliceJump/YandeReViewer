@@ -123,6 +123,9 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
 
     companion object {
         const val NEW_SEARCH_TAG = "NEW_SEARCH_TAG"
+        const val EXTRA_RATING_S = "extra_rating_s"
+        const val EXTRA_RATING_Q = "extra_rating_q"
+        const val EXTRA_RATING_E = "extra_rating_e"
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -276,6 +279,10 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
                     putExtra("position", position)
                     putExtra("first_visible_position", firstVisible)
                     putExtra("last_visible_position", lastVisible)
+                    // 传递复选框状态
+                    putExtra(EXTRA_RATING_S, ratingSCheckbox.isChecked)
+                    putExtra(EXTRA_RATING_Q, ratingQCheckbox.isChecked)
+                    putExtra(EXTRA_RATING_E, ratingECheckbox.isChecked)
                 }
 
                 val transitionName = "image_transition_${post.id}"
@@ -625,6 +632,13 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
     }
 
     private fun handleIntent(intent: Intent?) {
+        // 恢复复选框状态（如果有传递）
+        if (intent?.hasExtra(EXTRA_RATING_S) == true) {
+            ratingSCheckbox.isChecked = intent.getBooleanExtra(EXTRA_RATING_S, false)
+            ratingQCheckbox.isChecked = intent.getBooleanExtra(EXTRA_RATING_Q, false)
+            ratingECheckbox.isChecked = intent.getBooleanExtra(EXTRA_RATING_E, false)
+        }
+
         intent?.getStringExtra(NEW_SEARCH_TAG)?.let { tag ->
             selectedTags.clear()
             tagChipGroup.removeAllViews()
