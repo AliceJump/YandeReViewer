@@ -307,6 +307,18 @@ class DetailActivity : AppCompatActivity() {
         return super.onOptionsItemSelected(item)
     }
 
+    private fun convertPixivImageUrlToArtwork(url: String): String? {
+
+        if (!url.contains("i.pximg.net")) return null
+
+        val regex = Regex("""/(\d+)_p\d+""")
+        val match = regex.find(url) ?: return null
+
+        val illustId = match.groupValues[1]
+
+        return "https://www.pixiv.net/artworks/$illustId"
+    }
+
     // 设置来源按钮逻辑
     private fun setupSourceButton(currentPost: Post) {
         val source = currentPost.source
@@ -315,22 +327,38 @@ class DetailActivity : AppCompatActivity() {
         } else {
             sourceFab.show()
             sourceFab.setOnClickListener {
-                if (Patterns.WEB_URL.matcher(source).matches()) {
-                    // 打开网页
-                    var url = source
-                    if (!url.startsWith("http://") && !url.startsWith("https://")) {
-                        url = "https://$url"
-                    }
+                var url = source.trim()
+
+                // 先 Pixiv CDN → artworks
+                convertPixivImageUrlToArtwork(url)?.let {
+                    url = it
+                }
+
+                // 没协议补 https
+                if (!url.startsWith("http://") && !url.startsWith("https://")) {
+                    url = "https://$url"
+                }
+
+                // 再判断是不是可打开链接
+                if (Patterns.WEB_URL.matcher(url).matches()) {
+
                     val intent = Intent(Intent.ACTION_VIEW, url.toUri())
                     startActivity(intent)
+
                 } else {
-                    // 弹窗显示文本来源
-                    AlertDialog.Builder(this)
-                        .setTitle(R.string.detail_source_button_text)
-                        .setMessage(source)
-                        .setPositiveButton("OK", null)
-                        .show()
+
+                    // fallback 复制
+                    val clipboard = getSystemService(ClipboardManager::class.java)
+                    val clip = ClipData.newPlainText("source", source)
+                    clipboard.setPrimaryClip(clip)
+
+                    Toast.makeText(
+                        this,
+                        R.string.source_copied_to_clipboard,
+                        Toast.LENGTH_SHORT
+                    ).show()
                 }
+
             }
         }
     }
@@ -379,7 +407,8 @@ class DetailActivity : AppCompatActivity() {
                         when (which) {
 
                             0 -> {
-                                val clipboard = getSystemService(CLIPBOARD_SERVICE) as ClipboardManager
+                                val clipboard =
+                                    getSystemService(CLIPBOARD_SERVICE) as ClipboardManager
                                 val clip = ClipData.newPlainText("tag", tag)
                                 clipboard.setPrimaryClip(clip)
 
@@ -416,7 +445,6 @@ class DetailActivity : AppCompatActivity() {
 
                 true
             }
-
 
 
             // 根据标签类型添加到对应 ChipGroup

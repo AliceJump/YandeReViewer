@@ -45,4 +45,5 @@
     <string name="history">浏览记录</string>
     <string name="download_completed">下载完成</string>
     <string name="download_failed">下载失败: %1$s</string>
+    <string name="source_copied_to_clipboard">来源已复制到剪贴板</string>
 </resources>
