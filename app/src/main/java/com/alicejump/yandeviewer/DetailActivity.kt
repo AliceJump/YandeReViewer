@@ -25,6 +25,7 @@ import androidx.viewpager2.widget.ViewPager2
 import com.alicejump.yandeviewer.adapter.ImagePagerAdapter
 import com.alicejump.yandeviewer.data.BlacklistManager
 import com.alicejump.yandeviewer.data.FavoritesManager
+import com.alicejump.yandeviewer.data.FavoriteTagsManager
 import com.alicejump.yandeviewer.model.Post
 import com.alicejump.yandeviewer.viewmodel.TagTypeCache
 import com.google.android.material.chip.Chip
@@ -368,7 +369,8 @@ class DetailActivity : AppCompatActivity() {
 
                 val options = arrayOf(
                     getString(R.string.copy_tag),
-                    getString(R.string.add_to_blacklist)
+                    getString(R.string.add_to_blacklist),
+                    "收藏标签"
                 )
 
                 AlertDialog.Builder(this)
@@ -394,6 +396,17 @@ class DetailActivity : AppCompatActivity() {
                                 Toast.makeText(
                                     this,
                                     getString(R.string.tag_added_to_blacklist, tag),
+                                    Toast.LENGTH_SHORT
+                                ).show()
+                            }
+
+                            2 -> {
+                                // 收藏标签
+                                FavoriteTagsManager.addFavoriteTag(this, tag)
+
+                                Toast.makeText(
+                                    this,
+                                    "已收藏标签：$tag",
                                     Toast.LENGTH_SHORT
                                 ).show()
                             }

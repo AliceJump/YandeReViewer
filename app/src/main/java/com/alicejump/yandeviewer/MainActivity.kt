@@ -520,6 +520,9 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
         val imm = getSystemService(INPUT_METHOD_SERVICE) as InputMethodManager
         imm.hideSoftInputFromWindow(searchBox.windowToken, 0)
 
+        // 保存复选框状态到 SharedPreferences
+        saveCheckboxStates()
+
         // 组装查询条件
         val queryTags = mutableListOf<String>()
         queryTags += selectedTags
@@ -671,8 +674,21 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
         }
     }
 
+    // 保存复选框状态到 SharedPreferences
+    private fun saveCheckboxStates() {
+        val prefs = getSharedPreferences("rating_state", MODE_PRIVATE)
+        prefs.edit().apply {
+            putBoolean(EXTRA_RATING_S, ratingSCheckbox.isChecked)
+            putBoolean(EXTRA_RATING_Q, ratingQCheckbox.isChecked)
+            putBoolean(EXTRA_RATING_E, ratingECheckbox.isChecked)
+            apply()
+        }
+    }
+
     override fun onStop() {
         super.onStop()
+        // 保存复选框状态
+        saveCheckboxStates()
         TagTypeCache.flush(this)
     }
 
@@ -683,12 +699,16 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
 
     override fun onNavigationItemSelected(item: MenuItem): Boolean {
         when (item.itemId) {
-            R.id.nav_favorite_tags -> Toast.makeText(this, R.string.favorite_tags_clicked, Toast.LENGTH_SHORT).show()
+            R.id.nav_favorite_tags -> {
+                startActivity(Intent(this, FavoriteTagsActivity::class.java))
+            }
             R.id.nav_favorite_images -> {
                 switchToFavorites()
             }
 
-            R.id.nav_blacklist_tags -> Toast.makeText(this, R.string.blacklist_tags_clicked, Toast.LENGTH_SHORT).show()
+            R.id.nav_blacklist_tags -> {
+                startActivity(Intent(this, BlacklistActivity::class.java))
+            }
             R.id.nav_history -> Toast.makeText(this, R.string.history_clicked, Toast.LENGTH_SHORT).show()
         }
         drawerLayout.closeDrawer(GravityCompat.START)
