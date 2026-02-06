@@ -23,6 +23,7 @@ import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.RecyclerView
 import androidx.viewpager2.widget.ViewPager2
 import com.alicejump.yandeviewer.adapter.ImagePagerAdapter
+import com.alicejump.yandeviewer.data.BlacklistManager
 import com.alicejump.yandeviewer.data.FavoritesManager
 import com.alicejump.yandeviewer.model.Post
 import com.alicejump.yandeviewer.viewmodel.TagTypeCache
@@ -364,12 +365,46 @@ class DetailActivity : AppCompatActivity() {
 
             // 长按 -> 复制到剪贴板
             chip.setOnLongClickListener {
-                val clipboard = getSystemService(CLIPBOARD_SERVICE) as ClipboardManager
-                val clip = ClipData.newPlainText("tag", tag)
-                clipboard.setPrimaryClip(clip)
-                Toast.makeText(this, R.string.tag_copied_to_clipboard, Toast.LENGTH_SHORT).show()
+
+                val options = arrayOf(
+                    getString(R.string.copy_tag),
+                    getString(R.string.add_to_blacklist)
+                )
+
+                AlertDialog.Builder(this)
+                    .setItems(options) { _, which ->
+
+                        when (which) {
+
+                            0 -> {
+                                val clipboard = getSystemService(CLIPBOARD_SERVICE) as ClipboardManager
+                                val clip = ClipData.newPlainText("tag", tag)
+                                clipboard.setPrimaryClip(clip)
+
+                                Toast.makeText(
+                                    this,
+                                    R.string.tag_copied_to_clipboard,
+                                    Toast.LENGTH_SHORT
+                                ).show()
+                            }
+
+                            1 -> {
+                                BlacklistManager.add(tag)
+
+                                Toast.makeText(
+                                    this,
+                                    getString(R.string.tag_added_to_blacklist, tag),
+                                    Toast.LENGTH_SHORT
+                                ).show()
+                            }
+                        }
+                    }
+                    .show()
+
                 true
             }
+
+
 
             // 根据标签类型添加到对应 ChipGroup
             when (type) {

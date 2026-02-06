@@ -38,10 +38,12 @@ import androidx.drawerlayout.widget.DrawerLayout
 import androidx.lifecycle.lifecycleScope
 import androidx.paging.ExperimentalPagingApi
 import androidx.paging.PagingData
+import androidx.paging.filter
 import androidx.recyclerview.widget.RecyclerView
 import androidx.recyclerview.widget.StaggeredGridLayoutManager
 import androidx.swiperefreshlayout.widget.SwipeRefreshLayout
 import com.alicejump.yandeviewer.adapter.PostAdapter
+import com.alicejump.yandeviewer.data.BlacklistManager
 import com.alicejump.yandeviewer.data.FavoritesManager
 import com.alicejump.yandeviewer.model.Post
 import com.alicejump.yandeviewer.network.GitHubApiClient
@@ -96,6 +98,16 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
     }
 
     private var currentMode = FeedMode.NORMAL
+
+    private fun isBlacklisted(post: Post): Boolean {
+
+        val blacklist = BlacklistManager.getAll()
+        if (blacklist.isEmpty()) return false
+
+        val postTags = post.tags.split(" ")
+
+        return postTags.any { it in blacklist }
+    }
 
     private val onDownloadComplete: BroadcastReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context, intent: Intent) {
@@ -436,7 +448,12 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
         // 1️⃣ Post 列表分页
         lifecycleScope.launch {
             postViewModel.posts.collectLatest { pagingData ->
-                postAdapter.submitData(pagingData) // 显式类型避免 Cannot infer type for T
+                postAdapter.submitData(
+                    pagingData.filter { post ->
+                        !isBlacklisted(post)
+                    }
+                )
+                // 显式类型避免 Cannot infer type for T
             }
         }
 

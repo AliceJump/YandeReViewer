@@ -35,4 +35,7 @@
     <string name="post_unfavorited">Post unfavorited</string>
     <string name="scroll_to_top">Scroll to top</string>
     <string name="refresh">Refresh</string>
+    <string name="copy_tag">Copy Tag</string>
+    <string name="add_to_blacklist">Add to Blacklist</string>
+    <string name="tag_added_to_blacklist">Added to blacklist: %1$s</string>
 </resources>
