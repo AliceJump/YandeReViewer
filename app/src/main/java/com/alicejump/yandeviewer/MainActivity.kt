@@ -388,7 +388,7 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
 
 
     private fun showSelectionMenu(count: Int) {
-        supportActionBar?.title = "$count selected"
+        supportActionBar?.title = getString(R.string.items_selected, count)
         val menu = findViewById<Toolbar>(R.id.toolbar).menu
         menu.findItem(R.id.action_download)?.isVisible = true
         menu.findItem(R.id.action_copy_links)?.isVisible = true
@@ -727,7 +727,7 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
 
     private fun switchToFavorites() {
         currentMode = FeedMode.FAVORITES
-        supportActionBar?.title = "我的收藏"
+        supportActionBar?.title = getString(R.string.my_favorites)
 
         lifecycleScope.launch {
 

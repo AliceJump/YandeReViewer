@@ -38,4 +38,9 @@
     <string name="copy_tag">复制标签</string>
     <string name="add_to_blacklist">加入黑名单</string>
     <string name="tag_added_to_blacklist">已加入黑名单: %1$s</string>
+    <string name="favorite_tags">收藏标签</string>
+    <string name="blacklist_tags">黑名单标签</string>
+    <string name="my_favorites">我的收藏</string>
+    <string name="items_selected">%1$d 个已选中</string>
+    <string name="history">浏览记录</string>
 </resources>

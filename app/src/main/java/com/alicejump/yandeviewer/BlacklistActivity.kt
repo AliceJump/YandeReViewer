@@ -22,7 +22,7 @@ class BlacklistActivity : AppCompatActivity() {
         val toolbar: Toolbar? = headerView?.findViewById(R.id.toolbar)
         if (toolbar != null) {
             setSupportActionBar(toolbar)
-            supportActionBar?.title = "黑名单标签"
+            supportActionBar?.title = getString(R.string.blacklist_tags)
         }
 
         chipGroup = findViewById(R.id.blacklist_chip_group)

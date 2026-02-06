@@ -38,4 +38,9 @@
     <string name="copy_tag">Copy Tag</string>
     <string name="add_to_blacklist">Add to Blacklist</string>
     <string name="tag_added_to_blacklist">Added to blacklist: %1$s</string>
+    <string name="favorite_tags">Favorite Tags</string>
+    <string name="blacklist_tags">Blacklist Tags</string>
+    <string name="my_favorites">My Favorites</string>
+    <string name="items_selected">%1$d selected</string>
+    <string name="history">History</string>
 </resources>

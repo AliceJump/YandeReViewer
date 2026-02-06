@@ -25,7 +25,7 @@ class FavoriteTagsActivity : AppCompatActivity() {
         val toolbar: Toolbar? = headerView?.findViewById(R.id.toolbar)
         if (toolbar != null) {
             setSupportActionBar(toolbar)
-            supportActionBar?.title = "收藏标签"
+            supportActionBar?.title = getString(R.string.favorite_tags)
         }
 
         chipGroup = findViewById(R.id.favorite_tags_chip_group)
