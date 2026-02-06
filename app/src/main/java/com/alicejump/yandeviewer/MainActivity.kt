@@ -1,6 +1,5 @@
 package com.alicejump.yandeviewer
 
-import android.annotation.SuppressLint
 import android.app.DownloadManager
 import android.content.BroadcastReceiver
 import android.content.ClipData
@@ -22,8 +21,6 @@ import android.view.inputmethod.EditorInfo
 import android.view.inputmethod.InputMethodManager
 import android.widget.ArrayAdapter
 import android.widget.AutoCompleteTextView
-import android.widget.Button
-import android.widget.CheckBox
 import android.widget.Toast
 import androidx.activity.OnBackPressedCallback
 import androidx.activity.result.contract.ActivityResultContracts
@@ -49,21 +46,21 @@ import com.alicejump.yandeviewer.data.FavoritesManager
 import com.alicejump.yandeviewer.model.Post
 import com.alicejump.yandeviewer.network.GitHubApiClient
 import com.alicejump.yandeviewer.network.GitHubRelease
-import com.alicejump.yandeviewer.network.RetrofitClient
+import com.alicejump.yandeviewer.tool.downloadImage
 import com.alicejump.yandeviewer.viewmodel.PostViewModel
 import com.alicejump.yandeviewer.viewmodel.TagTypeCache
 import com.alicejump.yandeviewer.viewmodel.UpdateCheckState
 import com.alicejump.yandeviewer.viewmodel.UpdateViewModel
-import com.github.chrisbanes.photoview.BuildConfig
+import com.google.android.material.button.MaterialButton
 import com.google.android.material.chip.Chip
 import com.google.android.material.chip.ChipGroup
-import com.google.android.material.navigation.NavigationView
 import com.google.android.material.floatingactionbutton.FloatingActionButton
+import com.google.android.material.navigation.NavigationView
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import com.google.android.material.button.MaterialButton
+
 @OptIn(ExperimentalPagingApi::class)
 class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelectedListener {
 
@@ -334,20 +331,29 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
 
     override fun onOptionsItemSelected(item: MenuItem): Boolean {
         val selectedPosts = postAdapter.getSelectedItems()
+
         return when (item.itemId) {
+
             R.id.action_download -> {
-                val downloadManager = getSystemService(DOWNLOAD_SERVICE) as DownloadManager
-                selectedPosts.forEach { post ->
-                    val request = DownloadManager.Request(post.file_url.toUri())
-                        .setTitle("Downloading Post ${post.id}")
-                        .setDescription(post.tags)
-                        .setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED)
-                        .setDestinationInExternalPublicDir(
-                            Environment.DIRECTORY_DOWNLOADS, "yande.re_${post.id}.jpg"
-                        )
-                    downloadManager.enqueue(request)
+
+                if (selectedPosts.isEmpty()) {
+                    Toast.makeText(this, "No items selected", Toast.LENGTH_SHORT).show()
+                    return true
                 }
-                Toast.makeText(this, getString(R.string.started_downloading_multiple_items, selectedPosts.size), Toast.LENGTH_SHORT).show()
+
+                selectedPosts.forEach { post ->
+                    downloadImage(this, post,false)
+                }
+
+                Toast.makeText(
+                    this,
+                    getString(
+                        R.string.started_downloading_multiple_items,
+                        selectedPosts.size
+                    ),
+                    Toast.LENGTH_SHORT
+                ).show()
+
                 postAdapter.clearSelection()
                 hideSelectionMenu()
                 true
@@ -367,6 +373,7 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
             else -> super.onOptionsItemSelected(item)
         }
     }
+
 
     private fun showSelectionMenu(count: Int) {
         supportActionBar?.title = "$count selected"
@@ -547,7 +554,7 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
             val currentVersion = try {
                 val pInfo = packageManager.getPackageInfo(packageName, 0)
                 pInfo.versionName ?: "0.0"
-            } catch (e: Exception) {
+            } catch (_: Exception) {
                 "0.0"
             }
 

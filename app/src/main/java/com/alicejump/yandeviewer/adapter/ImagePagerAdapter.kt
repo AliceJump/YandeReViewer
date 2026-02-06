@@ -2,22 +2,15 @@ package com.alicejump.yandeviewer.adapter
 
 import android.annotation.SuppressLint
 import android.app.Activity
-import android.app.DownloadManager
 import android.content.ClipData
-import android.content.ContentValues
-import android.content.Context
 import android.content.Intent
-import android.os.Build
-import android.os.Environment
 import android.os.Handler
 import android.os.Looper
-import android.provider.MediaStore
 import android.view.*
 import android.widget.ImageView
 import android.widget.Toast
 import androidx.core.app.ActivityOptionsCompat
 import androidx.core.content.FileProvider
-import androidx.core.net.toUri
 import androidx.core.view.ViewCompat
 import androidx.recyclerview.widget.RecyclerView
 import coil.annotation.ExperimentalCoilApi
@@ -26,12 +19,8 @@ import coil.load
 import com.alicejump.yandeviewer.PhotoViewActivity
 import com.alicejump.yandeviewer.R
 import com.alicejump.yandeviewer.model.Post
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
+import com.alicejump.yandeviewer.tool.downloadImage
 import java.io.File
-import java.net.URL
 import kotlin.math.abs
 
 // RecyclerView 的适配器，用于显示图片列表，可分页浏览
@@ -140,59 +129,6 @@ class ImagePagerAdapter(private val posts: List<Post>) : RecyclerView.Adapter<Im
 
                     else -> false
                 }
-            }
-        }
-
-        // 下载图片方法
-        fun downloadImage(context: Context, post: Post) {
-            val appFolder = R.string.app_name.toString()
-            val extension = post.file_url.substringAfterLast('.', "jpg").lowercase()
-            val fileName = "yande.re_${post.id}.$extension".replace("[^a-zA-Z0-9._-]".toRegex(), "_")
-
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                Toast.makeText(context, "Started downloading", Toast.LENGTH_SHORT).show()
-                // Android 10 及以上使用 MediaStore API
-                CoroutineScope(Dispatchers.IO).launch {
-                    try {
-                        val values = ContentValues().apply {
-                            put(MediaStore.Downloads.DISPLAY_NAME, fileName)
-                            put(MediaStore.Downloads.MIME_TYPE, when (extension) {
-                                "png" -> "image/png"
-                                "gif" -> "image/gif"
-                                else -> "image/jpeg"
-                            })
-                            put(MediaStore.Downloads.RELATIVE_PATH, "Download/$appFolder")
-                        }
-                        val uri = context.contentResolver.insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI, values)
-                        if (uri != null) {
-                            context.contentResolver.openOutputStream(uri)?.use { output ->
-                                URL(post.file_url).openStream().use { input ->
-                                    input.copyTo(output)
-                                }
-                            }
-                            withContext(Dispatchers.Main) {
-                                Toast.makeText(context, "Download completed", Toast.LENGTH_SHORT).show()
-                            }
-                        }
-                    } catch (e: Exception) {
-                        withContext(Dispatchers.Main) {
-                            Toast.makeText(context, "Download failed: ${e.message}", Toast.LENGTH_SHORT).show()
-                        }
-                    }
-                }
-            } else {
-                // Android 10 以下使用 DownloadManager
-                val downloadManager = context.getSystemService(Context.DOWNLOAD_SERVICE) as DownloadManager
-                val request = DownloadManager.Request(post.file_url.toUri())
-                    .setTitle("Downloading Post ${post.id}")
-                    .setDescription(post.tags)
-                    .setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED)
-                    .setDestinationInExternalPublicDir(
-                        Environment.DIRECTORY_DOWNLOADS,
-                        "$appFolder/$fileName"
-                    )
-                downloadManager.enqueue(request)
-                Toast.makeText(context, "Started downloading", Toast.LENGTH_SHORT).show()
             }
         }
 
