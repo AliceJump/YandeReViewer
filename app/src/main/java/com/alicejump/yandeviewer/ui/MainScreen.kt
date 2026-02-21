@@ -58,6 +58,7 @@ import androidx.paging.compose.LazyPagingItems
 import androidx.paging.compose.itemKey
 import coil.compose.AsyncImage
 import com.alicejump.yandeviewer.DetailActivity
+import com.alicejump.yandeviewer.R
 import com.alicejump.yandeviewer.model.Post
 import com.alicejump.yandeviewer.viewmodel.TagTypeCache
 
