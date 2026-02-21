@@ -74,4 +74,6 @@
     <string name="version_text">版本 %1$s:\n%2$s</string>
     <string name="yandereviewer_title">YandeReViewer</string>
     <string name="downloading_post">正在下载帖子 %d</string>
+    <string name="site_page">站内页面</string>
+    <string name="menu_button">菜单</string>
 </resources>

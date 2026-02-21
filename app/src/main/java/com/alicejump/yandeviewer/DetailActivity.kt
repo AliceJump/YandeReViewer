@@ -45,8 +45,12 @@ class DetailActivity : AppCompatActivity() {
     // UI 元素
     private lateinit var viewPager: ViewPager2
     private lateinit var imagePagerAdapter: ImagePagerAdapter
+    private lateinit var menuFab: FloatingActionButton
+    private lateinit var internalFab: FloatingActionButton
     private lateinit var sourceFab: FloatingActionButton
     private lateinit var favoriteFab: FloatingActionButton
+    private var isExpanded = false
+
 
     // 标签的标题
     private lateinit var artistLabel: TextView
@@ -62,6 +66,7 @@ class DetailActivity : AppCompatActivity() {
     private lateinit var copyrightTagsContainer: ChipGroup
     private lateinit var characterTagsContainer: ChipGroup
     private lateinit var generalTagsContainer: ChipGroup
+
 
     private var firstVisiblePosition: Int = -1
     private var lastVisiblePosition: Int = -1
@@ -104,11 +109,56 @@ class DetailActivity : AppCompatActivity() {
         decorView.addView(snapshot, params)
         return snapshot
     }
+    private fun toggleFabDrawer() {
+        val distance = 300f // 按钮展开间距
+        if (!isExpanded) {
+            // 展开动画：向上弹出
+            sourceFab.visibility = View.VISIBLE
+            internalFab.visibility = View.VISIBLE
 
+            sourceFab.animate()
+                .translationY(-distance)   // 上移
+                .alpha(1f)
+                .setDuration(300)
+                .start()
+
+            internalFab.animate()
+                .translationY(-distance * 2)  // 再往上
+                .alpha(1f)
+                .setDuration(300)
+                .start()
+        } else {
+            // 收回动画
+            sourceFab.animate()
+                .translationY(0f)
+                .alpha(0f)
+                .setDuration(300)
+                .withEndAction { sourceFab.visibility = View.GONE }
+                .start()
+
+            internalFab.animate()
+                .translationY(0f)
+                .alpha(0f)
+                .setDuration(300)
+                .withEndAction { internalFab.visibility = View.GONE }
+                .start()
+        }
+        isExpanded = !isExpanded
+    }
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_detail)
+        internalFab = findViewById(R.id.fab_internal)
 
+        // ======= 获取按钮引用 =======
+        menuFab = findViewById(R.id.fab_menu)
+        sourceFab = findViewById(R.id.fab_source)
+        favoriteFab = findViewById(R.id.fab_favorite)
+
+        // ======= 点击菜单按钮展开/收起 =======
+        menuFab.setOnClickListener {
+            toggleFabDrawer()
+        }
         // 延迟共享元素过渡，等 View 加载完成
         postponeEnterTransition()
 
@@ -260,7 +310,15 @@ class DetailActivity : AppCompatActivity() {
 
             updateFavoriteButton(currentPost)
         }
+        internalFab.setOnClickListener {
+            val post = posts[viewPager.currentItem] // 或者 posts[viewPager.currentItem]
+            val postId = post.id
+            val url = "https://yande.re/post/show/$postId"
 
+            // 使用浏览器打开
+            val intent = Intent(Intent.ACTION_VIEW, url.toUri())
+            startActivity(intent)
+        }
         // ====== 标签缓存更新监听 ======
         lifecycleScope.launch {
             TagTypeCache.tagTypes.collectLatest { _ ->

@@ -74,4 +74,6 @@
     <string name="version_text">Version %1$s:\n%2$s</string>
     <string name="yandereviewer_title">YandeReViewer</string>
     <string name="downloading_post">Downloading Post %d</string>
+    <string name="site_page">Site Page</string>
+    <string name="menu_button">Menu</string>
 </resources>
