@@ -124,7 +124,7 @@ fun downloadImage(context: Context, post: Post, showToast: Boolean = true, cache
         // Android 10 以下使用 DownloadManager
         val downloadManager = context.getSystemService(Context.DOWNLOAD_SERVICE) as DownloadManager
         val request = DownloadManager.Request(post.file_url.toUri())
-            .setTitle("Downloading Post ${post.id}")
+            .setTitle(context.getString(R.string.downloading_post, post.id))
             .setDescription(post.tags)
             .setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED)
             .setDestinationInExternalPublicDir(

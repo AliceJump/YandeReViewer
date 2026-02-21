@@ -49,6 +49,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import androidx.paging.ExperimentalPagingApi
@@ -102,10 +103,10 @@ fun MainScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("YandeReViewer") },
+                title = { Text(stringResource(R.string.yandereviewer_title)) },
                 navigationIcon = {
                     IconButton(onClick = onMenuClick) {
-                        Icon(Icons.Filled.Menu, contentDescription = "Menu")
+                        Icon(Icons.Filled.Menu, contentDescription = stringResource(R.string.menu_description))
                     }
                 }
             )
@@ -120,8 +121,8 @@ fun MainScreen(
                             newTag = it
                             dropdownExpanded = it.isNotBlank()
                         },
-                        label = { Text("Add a tag") },
-                        leadingIcon = { Icon(Icons.Filled.Search, contentDescription = "Search") },
+                        label = { Text(stringResource(R.string.add_a_tag)) },
+                        leadingIcon = { Icon(Icons.Filled.Search, contentDescription = stringResource(R.string.search_description)) },
                         modifier = Modifier.fillMaxWidth(),
                         keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
                         keyboardActions = KeyboardActions(onDone = {
@@ -163,7 +164,7 @@ fun MainScreen(
                             trailingIcon = {
                                 Icon(
                                     imageVector = Icons.Default.Close,
-                                    contentDescription = "Remove tag",
+                                    contentDescription = stringResource(R.string.remove_tag_description),
                                     modifier = Modifier.clickable { selectedTags.remove(tag) }
                                 )
                             }
@@ -173,17 +174,17 @@ fun MainScreen(
                 Spacer(modifier = Modifier.height(8.dp))
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Checkbox(checked = ratingS, onCheckedChange = { ratingS = it })
-                    Text("Safe")
+                    Text(stringResource(R.string.safe))
                     Spacer(modifier = Modifier.width(16.dp))
                     Checkbox(checked = ratingQ, onCheckedChange = { ratingQ = it })
-                    Text("Questionable")
+                    Text(stringResource(R.string.questionable))
                     Spacer(modifier = Modifier.width(16.dp))
                     Checkbox(checked = ratingE, onCheckedChange = { ratingE = it })
-                    Text("Explicit")
+                    Text(stringResource(R.string.explicit))
                 }
                 Spacer(modifier = Modifier.height(8.dp))
                 Button(onClick = { performSearch() }, modifier = Modifier.fillMaxWidth()) {
-                    Text("Search")
+                    Text(stringResource(R.string.search))
                 }
             }
             PullToRefreshBox(
@@ -192,7 +193,7 @@ fun MainScreen(
             {
                 if (posts.itemCount == 0 && !isRefreshing) {
                     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                        Text("No results found.")
+                        Text(stringResource(R.string.no_results_found))
                     }
                 } else {
                     LazyVerticalStaggeredGrid(

@@ -418,7 +418,7 @@ class DetailActivity : AppCompatActivity() {
                 val options = arrayOf(
                     getString(R.string.copy_tag),
                     getString(R.string.add_to_blacklist),
-                    "收藏标签"
+                    getString(R.string.favorite_tag)
                 )
 
                 AlertDialog.Builder(this)
@@ -447,7 +447,7 @@ class DetailActivity : AppCompatActivity() {
                                 FavoriteTagsManager.addFavoriteTag(this, tag)
                                 Toast.makeText(
                                     this,
-                                    "已收藏标签：$tag",
+                                    getString(R.string.tag_favorited, tag),
                                     Toast.LENGTH_SHORT
                                 ).show()
                             }

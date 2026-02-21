@@ -46,7 +46,7 @@ class BlacklistActivity : AppCompatActivity() {
         val blacklistTags = BlacklistManager.getAll().sorted()
 
         if (blacklistTags.isEmpty()) {
-            Toast.makeText(this, "黑名单为空", Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, R.string.blacklist_is_empty, Toast.LENGTH_SHORT).show()
             return
         }
 
@@ -75,16 +75,16 @@ class BlacklistActivity : AppCompatActivity() {
 
     private fun showTagContextMenu(chip: Chip, tagName: String) {
         PopupMenu(this, chip).apply {
-            menu.add("删除")
+            menu.add(R.string.delete)
 
             setOnMenuItemClickListener { item ->
                 when (item.title) {
-                    "删除" -> {
+                    getString(R.string.delete) -> {
                         BlacklistManager.remove(tagName)
                         chipGroup.removeView(chip)
                         Toast.makeText(
                             this@BlacklistActivity,
-                            "已从黑名单删除：$tagName",
+                            getString(R.string.removed_from_blacklist, tagName),
                             Toast.LENGTH_SHORT
                         ).show()
                         true

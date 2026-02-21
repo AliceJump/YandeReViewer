@@ -71,7 +71,7 @@ class FavoriteTagsActivity : AppCompatActivity() {
             val favoriteTags = FavoriteTagsManager.getAllTags(this@FavoriteTagsActivity)
 
             if (favoriteTags.isEmpty()) {
-                Toast.makeText(this@FavoriteTagsActivity, "还没有收藏任何标签", Toast.LENGTH_SHORT).show()
+                Toast.makeText(this@FavoriteTagsActivity, R.string.no_favorite_tags_yet, Toast.LENGTH_SHORT).show()
                 return@launch
             }
 
@@ -152,7 +152,7 @@ class FavoriteTagsActivity : AppCompatActivity() {
         FavoriteTagsManager.removeFavoriteTag(this, tagName)
         val parent = chip.parent as? ChipGroup
         parent?.removeView(chip)
-        Toast.makeText(this, "${R.string.remove_favorite_tag}：$tagName", Toast.LENGTH_SHORT).show()
+        Toast.makeText(this, getString(R.string.removed_from_favorites_with_tag_name, tagName), Toast.LENGTH_SHORT).show()
         updateGroupVisibilityAndDividers()
     }
 

@@ -347,7 +347,7 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
         return when (item.itemId) {
             R.id.action_download -> {
                 if (selectedPosts.isEmpty()) {
-                    Toast.makeText(this, "No items selected", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(this, R.string.no_items_selected, Toast.LENGTH_SHORT).show()
                     return true
                 }
                 selectedPosts.forEach { post ->
@@ -547,13 +547,13 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
                 .filter { isVersionNewer(it.tagName, currentVersion) }
                 .sortedBy { it.tagName }
 
-            val changelog = newerReleases.joinToString("\n\n") { "Version ${it.tagName}:\n${it.body}" }
+            val changelog = newerReleases.joinToString("\n\n") { getString(R.string.version_text, it.tagName, it.body) }
 
             // 4️⃣ 弹出 Dialog
             AlertDialog.Builder(this@MainActivity)
-                .setTitle("New Version Available: ${'$'}{latestRelease.name}")
-                .setMessage(changelog.ifEmpty { "No changelog available" })
-                .setPositiveButton("Update Now") { dialog, _ ->
+                .setTitle(getString(R.string.new_version_available, latestRelease.name))
+                .setMessage(changelog.ifEmpty { getString(R.string.no_changelog_available) })
+                .setPositiveButton(R.string.update_now) { dialog, _ ->
                     val apkAsset = latestRelease.assets.firstOrNull { it.downloadUrl.endsWith(".apk") }
                     if (apkAsset != null) {
                         startDownload(apkAsset.downloadUrl, latestRelease.tagName)
@@ -562,11 +562,11 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
                     }
                     dialog.dismiss()
                 }
-                .setNegativeButton("Ignore this version") { dialog, _ ->
+                .setNegativeButton(R.string.ignore_this_version) { dialog, _ ->
                     updateViewModel.ignoreThisVersion(this@MainActivity, latestRelease.tagName.removePrefix("v"))
                     dialog.dismiss()
                 }
-                .setNeutralButton("Remind me in 7 days") { dialog, _ ->
+                .setNeutralButton(R.string.remind_me_in_7_days) { dialog, _ ->
                     updateViewModel.snoozeUpdate(this@MainActivity, 7)
                     dialog.dismiss()
                 }
@@ -589,8 +589,8 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
 
     private fun startDownload(url: String, version: String) {
         val downloadManager = getSystemService(DOWNLOAD_SERVICE) as DownloadManager
-        val request = DownloadManager.Request(url.toUri()).setTitle("YandeReViewer Update")
-            .setDescription("Downloading version $version")
+        val request = DownloadManager.Request(url.toUri()).setTitle(getString(R.string.yandereviewer_update))
+            .setDescription(getString(R.string.downloading_version, version))
             .setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED)
             .setDestinationInExternalFilesDir(
                 this, Environment.DIRECTORY_DOWNLOADS, "YandeReViewer-$version.apk"
