@@ -13,3 +13,12 @@
 .externalNativeBuild
 .cxx
 local.properties
+/.idea/copilot.data.migration.agent.xml
+/.idea/copilot.data.migration.ask.xml
+/.idea/copilot.data.migration.ask2agent.xml
+/.idea/copilot.data.migration.edit.xml
+/.github/copilot-instructions.md
+/.vscode/launch.json
+/.vscode/tasks.json
+/VSCODE_QUICKSTART.md
+/app/yande-reviewer-key.jks

@@ -1,0 +1,4 @@
+<resources>
+    <dimen name="divider_height">1dp</dimen>
+    <dimen name="divider_margin_vertical">12dp</dimen>
+</resources>

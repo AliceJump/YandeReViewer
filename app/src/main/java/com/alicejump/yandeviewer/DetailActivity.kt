@@ -16,6 +16,8 @@ import android.widget.Toast
 import androidx.activity.OnBackPressedCallback
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
+import androidx.constraintlayout.widget.ConstraintLayout
+import androidx.constraintlayout.widget.ConstraintSet
 import androidx.core.graphics.createBitmap
 import androidx.core.net.toUri
 import androidx.core.view.children
@@ -33,6 +35,8 @@ import com.google.android.material.chip.ChipGroup
 import com.google.android.material.floatingactionbutton.FloatingActionButton
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
+import androidx.core.view.isVisible
+import androidx.core.view.isNotEmpty
 
 // 详情页 Activity，用于查看单张图片、标签、来源信息，并可进行收藏
 class DetailActivity : AppCompatActivity() {
@@ -48,6 +52,9 @@ class DetailActivity : AppCompatActivity() {
     private lateinit var copyrightLabel: TextView
     private lateinit var characterLabel: TextView
     private lateinit var generalLabel: TextView
+    private lateinit var dividerArtist: View
+    private lateinit var dividerCopyright: View
+    private lateinit var dividerCharacter: View
 
     // ChipGroup 用于显示不同类型标签
     private lateinit var artistTagsContainer: ChipGroup
@@ -203,6 +210,10 @@ class DetailActivity : AppCompatActivity() {
         copyrightTagsContainer = findViewById(R.id.copyright_tags_container)
         characterTagsContainer = findViewById(R.id.character_tags_container)
         generalTagsContainer = findViewById(R.id.general_tags_container)
+        dividerArtist = findViewById(R.id.divider_artist)
+        dividerCopyright = findViewById(R.id.divider_copyright)
+        dividerCharacter = findViewById(R.id.divider_character)
+
 
         // 获取 Intent 数据
         val posts = if (android.os.Build.VERSION.SDK_INT >= 33) {
@@ -362,7 +373,55 @@ class DetailActivity : AppCompatActivity() {
             }
         }
     }
+    private fun relinkGroups() {
 
+        val parent = findViewById<ConstraintLayout>(R.id.contentContainer)
+        val set = ConstraintSet()
+        set.clone(parent)
+
+        val groups = listOf(
+            Triple(artistTagsContainer, dividerArtist, viewPager.id),
+            Triple(copyrightTagsContainer, dividerCopyright, artistTagsContainer.id),
+            Triple(characterTagsContainer, dividerCharacter, copyrightTagsContainer.id),
+            Triple(generalTagsContainer, null, characterTagsContainer.id)
+        )
+
+        var lastVisibleId = viewPager.id
+
+        groups.forEach { (group, divider, _) ->
+
+            if (group.isVisible) {
+
+                // group 连接到上一个可见内容
+                set.connect(
+                    group.id,
+                    ConstraintSet.TOP,
+                    lastVisibleId,
+                    ConstraintSet.BOTTOM
+                )
+
+                divider?.let {
+                    it.visibility = View.VISIBLE
+
+                    set.connect(
+                        it.id,
+                        ConstraintSet.TOP,
+                        group.id,
+                        ConstraintSet.BOTTOM
+                    )
+
+                    lastVisibleId = it.id
+                } ?: run {
+                    lastVisibleId = group.id
+                }
+
+            } else {
+                divider?.visibility = View.GONE
+            }
+        }
+
+        set.applyTo(parent)
+    }
     // 设置标签显示逻辑
     private fun setupTags(currentPostTags: Set<String>, allTagTypes: Map<String, Int>) {
         // 清空旧标签
@@ -461,13 +520,44 @@ class DetailActivity : AppCompatActivity() {
         updateGroupVisibility(copyrightLabel, copyrightTagsContainer)
         updateGroupVisibility(characterLabel, characterTagsContainer)
         updateGroupVisibility(generalLabel, generalTagsContainer)
+        updateDividers()
     }
+    private fun updateDividers() {
 
+        val groups = listOf(
+            artistTagsContainer to dividerArtist,
+            copyrightTagsContainer to dividerCopyright,
+            characterTagsContainer to dividerCharacter,
+            generalTagsContainer to null
+        )
+
+        for (i in groups.indices) {
+
+            val (group, divider) = groups[i]
+
+            if (divider == null) continue   // general 没有分隔线
+
+            val currentVisible = group.isVisible
+
+            // 检查下面是否还有可见分组
+            val hasVisibleBelow = groups
+                .drop(i + 1)
+                .any { it.first.isVisible }
+
+            divider.visibility =
+                if (currentVisible && hasVisibleBelow)
+                    View.VISIBLE
+                else
+                    View.GONE
+        }
+    }
     // 更新标签组和标题可见性
     private fun updateGroupVisibility(label: TextView, group: ChipGroup) {
-        val visibility = if (group.children.count() > 0) View.VISIBLE else View.GONE
-        label.visibility = visibility
-        group.visibility = visibility
+
+        val visible = group.isNotEmpty()
+
+        label.visibility = if (visible) View.VISIBLE else View.GONE
+        group.visibility = if (visible) View.VISIBLE else View.GONE
     }
 
     override fun onStop() {

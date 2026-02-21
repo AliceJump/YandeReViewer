@@ -11,5 +11,5 @@
     <color name="green_500">#4CAF50</color>
     <color name="yellow_700">#FBC02D</color>
     <color name="red_500">#F44336</color>
-
+    <color name="divider_light">#33000000</color>
 </resources>
