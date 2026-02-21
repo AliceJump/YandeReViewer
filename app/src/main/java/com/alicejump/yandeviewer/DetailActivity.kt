@@ -373,55 +373,6 @@ class DetailActivity : AppCompatActivity() {
             }
         }
     }
-    private fun relinkGroups() {
-
-        val parent = findViewById<ConstraintLayout>(R.id.contentContainer)
-        val set = ConstraintSet()
-        set.clone(parent)
-
-        val groups = listOf(
-            Triple(artistTagsContainer, dividerArtist, viewPager.id),
-            Triple(copyrightTagsContainer, dividerCopyright, artistTagsContainer.id),
-            Triple(characterTagsContainer, dividerCharacter, copyrightTagsContainer.id),
-            Triple(generalTagsContainer, null, characterTagsContainer.id)
-        )
-
-        var lastVisibleId = viewPager.id
-
-        groups.forEach { (group, divider, _) ->
-
-            if (group.isVisible) {
-
-                // group 连接到上一个可见内容
-                set.connect(
-                    group.id,
-                    ConstraintSet.TOP,
-                    lastVisibleId,
-                    ConstraintSet.BOTTOM
-                )
-
-                divider?.let {
-                    it.visibility = View.VISIBLE
-
-                    set.connect(
-                        it.id,
-                        ConstraintSet.TOP,
-                        group.id,
-                        ConstraintSet.BOTTOM
-                    )
-
-                    lastVisibleId = it.id
-                } ?: run {
-                    lastVisibleId = group.id
-                }
-
-            } else {
-                divider?.visibility = View.GONE
-            }
-        }
-
-        set.applyTo(parent)
-    }
     // 设置标签显示逻辑
     private fun setupTags(currentPostTags: Set<String>, allTagTypes: Map<String, Int>) {
         // 清空旧标签
