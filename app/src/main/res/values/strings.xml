@@ -37,6 +37,7 @@
     <string name="refresh">Refresh</string>
     <string name="copy_tag">Copy Tag</string>
     <string name="add_to_blacklist">Add to Blacklist</string>
+    <string name="remove_favorite_tag">Remove from Favorites</string>
     <string name="tag_added_to_blacklist">Added to blacklist: %1$s</string>
     <string name="favorite_tags">Favorite Tags</string>
     <string name="blacklist_tags">Blacklist Tags</string>

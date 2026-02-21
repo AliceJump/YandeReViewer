@@ -4,132 +4,181 @@ import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Intent
 import android.os.Bundle
-import android.widget.PopupMenu
+import android.view.View
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.widget.Toolbar
+import androidx.lifecycle.lifecycleScope
 import com.alicejump.yandeviewer.data.FavoriteTagsManager
+import com.alicejump.yandeviewer.viewmodel.TagTypeCache
 import com.google.android.material.chip.Chip
 import com.google.android.material.chip.ChipGroup
+import kotlinx.coroutines.launch
+import androidx.core.view.isNotEmpty
 
 class FavoriteTagsActivity : AppCompatActivity() {
 
-    private lateinit var chipGroup: ChipGroup
+    private lateinit var artistLabel: android.widget.TextView
+    private lateinit var copyrightLabel: android.widget.TextView
+    private lateinit var characterLabel: android.widget.TextView
+    private lateinit var generalLabel: android.widget.TextView
+
+    private lateinit var artistTagsContainer: ChipGroup
+    private lateinit var copyrightTagsContainer: ChipGroup
+    private lateinit var characterTagsContainer: ChipGroup
+    private lateinit var generalTagsContainer: ChipGroup
+
+    // XML 中已经放置好的分割线
+    private lateinit var dividerArtist: View
+    private lateinit var dividerCopyright: View
+    private lateinit var dividerCharacter: View
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_favorite_tags)
 
-        // 获取 header 中的 Toolbar 并设置
+        // Toolbar
         val headerView = findViewById<com.google.android.material.appbar.AppBarLayout>(R.id.appBarLayout)
         val toolbar: Toolbar? = headerView?.findViewById(R.id.toolbar)
-        if (toolbar != null) {
-            setSupportActionBar(toolbar)
+        toolbar?.let {
+            setSupportActionBar(it)
             supportActionBar?.title = getString(R.string.favorite_tags)
+            supportActionBar?.setDisplayHomeAsUpEnabled(true)
         }
 
-        chipGroup = findViewById(R.id.favorite_tags_chip_group)
+        // 初始化视图
+        artistLabel = findViewById(R.id.artist_label)
+        copyrightLabel = findViewById(R.id.copyright_label)
+        characterLabel = findViewById(R.id.character_label)
+        generalLabel = findViewById(R.id.general_label)
+
+        artistTagsContainer = findViewById(R.id.artist_tags_container)
+        copyrightTagsContainer = findViewById(R.id.copyright_tags_container)
+        characterTagsContainer = findViewById(R.id.character_tags_container)
+        generalTagsContainer = findViewById(R.id.general_tags_container)
+
+        dividerArtist = findViewById(R.id.divider_artist)
+        dividerCopyright = findViewById(R.id.divider_copyright)
+        dividerCharacter = findViewById(R.id.divider_character)
 
         loadFavoriteTags()
     }
 
     private fun loadFavoriteTags() {
-        chipGroup.removeAllViews()
+        lifecycleScope.launch {
+            val allTagTypes = TagTypeCache.tagTypes.value
+            val favoriteTags = FavoriteTagsManager.getAllTags(this@FavoriteTagsActivity)
 
-        val favoriteTags = FavoriteTagsManager.getAllTags(this).sorted()
+            if (favoriteTags.isEmpty()) {
+                Toast.makeText(this@FavoriteTagsActivity, "还没有收藏任何标签", Toast.LENGTH_SHORT).show()
+                return@launch
+            }
 
-        if (favoriteTags.isEmpty()) {
-            Toast.makeText(this, "还没有收藏任何标签", Toast.LENGTH_SHORT).show()
-            return
-        }
-
-        favoriteTags.forEach { tag ->
-            val chip = createTagChip(tag)
-            chipGroup.addView(chip)
+            displayTagsByCategory(favoriteTags.toSet(), allTagTypes)
         }
     }
 
-    private fun createTagChip(tagName: String): Chip {
-        return Chip(this).apply {
-            text = tagName
-            isClickable = true
-            isFocusable = true
-            isLongClickable = true
+    private fun displayTagsByCategory(tags: Set<String>, allTagTypes: Map<String, Int>) {
+        artistTagsContainer.removeAllViews()
+        copyrightTagsContainer.removeAllViews()
+        characterTagsContainer.removeAllViews()
+        generalTagsContainer.removeAllViews()
 
-            // 点击 -> 跳转搜索该标签（启动新的 MainActivity，并传递复选框状态）
-            setOnClickListener {
-                val intent = Intent(this@FavoriteTagsActivity, MainActivity::class.java).apply {
-                    putExtra(MainActivity.NEW_SEARCH_TAG, tagName)
-                    // 传递三个复选框的状态（从 SharedPreferences 获取）
-                    putExtra(MainActivity.EXTRA_RATING_S, getRatingSState())
-                    putExtra(MainActivity.EXTRA_RATING_Q, getRatingQState())
-                    putExtra(MainActivity.EXTRA_RATING_E, getRatingEState())
+        tags.forEach { tag ->
+            val type = allTagTypes[tag] ?: -1
+            val chip = Chip(this).apply {
+                text = tag
+                isClickable = true
+                isFocusable = true
+                setOnClickListener {
+                    val intent = Intent(this@FavoriteTagsActivity, MainActivity::class.java).apply {
+                        putExtra(MainActivity.NEW_SEARCH_TAG, tag)
+                        putExtra(MainActivity.EXTRA_RATING_S, getRatingState(MainActivity.EXTRA_RATING_S))
+                        putExtra(MainActivity.EXTRA_RATING_Q, getRatingState(MainActivity.EXTRA_RATING_Q))
+                        putExtra(MainActivity.EXTRA_RATING_E, getRatingState(MainActivity.EXTRA_RATING_E))
+                    }
+                    startActivity(intent)
                 }
-                startActivity(intent)
+                setOnLongClickListener {
+                    showTagContextMenu(this, tag)
+                    true
+                }
             }
 
-            // 长按 -> 删除或复制
-            setOnLongClickListener {
-                showTagContextMenu(this, tagName)
-                true
+            when (type) {
+                1 -> artistTagsContainer.addView(chip)
+                3 -> copyrightTagsContainer.addView(chip)
+                4 -> characterTagsContainer.addView(chip)
+                else -> generalTagsContainer.addView(chip)
             }
         }
+
+        updateGroupVisibilityAndDividers()
     }
 
     private fun showTagContextMenu(chip: Chip, tagName: String) {
-        PopupMenu(this, chip).apply {
-            menu.add("删除")
-            menu.add("复制")
-
-            setOnMenuItemClickListener { item ->
-                when (item.title) {
-                    "删除" -> {
-                        FavoriteTagsManager.removeFavoriteTag(this@FavoriteTagsActivity, tagName)
-                        chipGroup.removeView(chip)
-                        Toast.makeText(
-                            this@FavoriteTagsActivity,
-                            "已从收藏删除：$tagName",
-                            Toast.LENGTH_SHORT
-                        ).show()
-                        true
-                    }
-                    "复制" -> {
-                        val clipboard = this@FavoriteTagsActivity.getSystemService(CLIPBOARD_SERVICE) as ClipboardManager
-                        val clip = ClipData.newPlainText("tag", tagName)
-                        clipboard.setPrimaryClip(clip)
-                        Toast.makeText(
-                            this@FavoriteTagsActivity,
-                            "已复制到剪贴板",
-                            Toast.LENGTH_SHORT
-                        ).show()
-                        true
-                    }
-                    else -> false
+        val options = arrayOf(getString(R.string.copy_tag), getString(R.string.remove_favorite_tag))
+        androidx.appcompat.app.AlertDialog.Builder(this)
+            .setItems(options) { _, which ->
+                when (which) {
+                    0 -> copyTagToClipboard(tagName)
+                    1 -> removeFavoriteTag(chip, tagName)
                 }
-            }
-            show()
-        }
+            }.show()
     }
 
-    // 从 SharedPreferences 中获取复选框状态
-    private fun getRatingSState(): Boolean {
+    private fun copyTagToClipboard(tagName: String) {
+        val clipboard = getSystemService(CLIPBOARD_SERVICE) as ClipboardManager
+        clipboard.setPrimaryClip(ClipData.newPlainText("tag", tagName))
+        Toast.makeText(this, R.string.tag_copied_to_clipboard, Toast.LENGTH_SHORT).show()
+    }
+
+    private fun removeFavoriteTag(chip: Chip, tagName: String) {
+        FavoriteTagsManager.removeFavoriteTag(this, tagName)
+        val parent = chip.parent as? ChipGroup
+        parent?.removeView(chip)
+        Toast.makeText(this, "${R.string.remove_favorite_tag}：$tagName", Toast.LENGTH_SHORT).show()
+        updateGroupVisibilityAndDividers()
+    }
+
+    private fun updateGroupVisibilityAndDividers() {
+        // 更新每组可见性
+        val artistVisible = updateGroupVisibility(artistLabel, artistTagsContainer)
+        val copyrightVisible = updateGroupVisibility(copyrightLabel, copyrightTagsContainer)
+        val characterVisible = updateGroupVisibility(characterLabel, characterTagsContainer)
+        val generalVisible = updateGroupVisibility(generalLabel, generalTagsContainer)
+
+        // 分割线显示条件：当前组可见且后面有其他可见组
+        dividerArtist.visibility =
+            if (artistVisible && (copyrightVisible || characterVisible || generalVisible)) View.VISIBLE else View.GONE
+
+        dividerCopyright.visibility =
+            if (copyrightVisible && (characterVisible || generalVisible)) View.VISIBLE else View.GONE
+
+        dividerCharacter.visibility =
+            if (characterVisible && generalVisible) View.VISIBLE else View.GONE
+    }
+
+    // 更新标签组和标题可见性，返回当前组是否可见
+    private fun updateGroupVisibility(label: android.widget.TextView, group: ChipGroup): Boolean {
+        val visible = group.isNotEmpty()
+        label.visibility = if (visible) View.VISIBLE else View.GONE
+        group.visibility = if (visible) View.VISIBLE else View.GONE
+        return visible
+    }
+
+    private fun getRatingState(key: String): Boolean {
         val prefs = getSharedPreferences("rating_state", MODE_PRIVATE)
-        return prefs.getBoolean(MainActivity.EXTRA_RATING_S, false)
+        return prefs.getBoolean(key, false)
     }
 
-    private fun getRatingQState(): Boolean {
-        val prefs = getSharedPreferences("rating_state", MODE_PRIVATE)
-        return prefs.getBoolean(MainActivity.EXTRA_RATING_Q, false)
+    override fun onSupportNavigateUp(): Boolean {
+        onBackPressedDispatcher.onBackPressed() // 使用新的回调分发器
+        return true
     }
 
-    private fun getRatingEState(): Boolean {
-        val prefs = getSharedPreferences("rating_state", MODE_PRIVATE)
-        return prefs.getBoolean(MainActivity.EXTRA_RATING_E, false)
-    }
-
-    override fun onBackPressed() {
-        super.onBackPressed()
-        finish()
+    override fun onStop() {
+        super.onStop()
+        TagTypeCache.flush(this)
     }
 }
-

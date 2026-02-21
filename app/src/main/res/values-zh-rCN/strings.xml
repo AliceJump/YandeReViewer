@@ -10,7 +10,7 @@
     <string name="detail_artist_label">作者:</string>
     <string name="detail_copyright_label">来源作品:</string>
     <string name="detail_character_label">角色:</string>
-    <string name="detail_tags_label">标签:</string>
+    <string name="detail_tags_label">普通标签:</string>
     <string name="detail_source_button_text">来源</string>
     <string name="navigation_drawer_open">打开导航抽屉</string>
     <string name="navigation_drawer_close">关闭导航抽屉</string>
@@ -37,6 +37,7 @@
     <string name="refresh">刷新</string>
     <string name="copy_tag">复制标签</string>
     <string name="add_to_blacklist">加入黑名单</string>
+    <string name="remove_favorite_tag">从收藏移除</string>
     <string name="tag_added_to_blacklist">已加入黑名单: %1$s</string>
     <string name="favorite_tags">收藏标签</string>
     <string name="blacklist_tags">黑名单标签</string>
