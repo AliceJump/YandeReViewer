@@ -48,7 +48,10 @@ import com.alicejump.yandeviewer.data.FavoritesManager
 import com.alicejump.yandeviewer.model.Post
 import com.alicejump.yandeviewer.network.GitHubApiClient
 import com.alicejump.yandeviewer.network.GitHubRelease
+import com.alicejump.yandeviewer.sync.ArtistSyncer
 import com.alicejump.yandeviewer.tool.downloadImage
+import com.alicejump.yandeviewer.utils.getArtistDisplayName
+import com.alicejump.yandeviewer.viewmodel.ArtistCache
 import com.alicejump.yandeviewer.viewmodel.PostViewModel
 import com.alicejump.yandeviewer.viewmodel.TagTypeCache
 import com.alicejump.yandeviewer.viewmodel.UpdateCheckState
@@ -63,9 +66,9 @@ import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
+
 @OptIn(ExperimentalPagingApi::class)
 class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelectedListener {
-
     private lateinit var tagChipGroup: ChipGroup
     private lateinit var drawerLayout: DrawerLayout
     private var favoriteSource: List<Post> = emptyList()
@@ -77,8 +80,6 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
 
     private lateinit var recyclerView: RecyclerView
     private lateinit var searchBox: AutoCompleteTextView
-
-
 
     private lateinit var ratingSCheckbox: MaterialButton
     private lateinit var ratingQCheckbox: MaterialButton
@@ -100,12 +101,9 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
     private var currentMode = FeedMode.NORMAL
 
     private fun isBlacklisted(post: Post): Boolean {
-
         val blacklist = BlacklistManager.getAll()
         if (blacklist.isEmpty()) return false
-
         val postTags = post.tags.split(" ")
-
         return postTags.any { it in blacklist }
     }
 
@@ -155,7 +153,6 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
 
         navView.setNavigationItemSelectedListener(this)
 
-        // 注册下载完成广播
         ContextCompat.registerReceiver(
             this,
             onDownloadComplete,
@@ -167,6 +164,17 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
         setupRecyclerView()
         setupSearch()
         setupBackPressedHandler()
+
+        lifecycleScope.launch {
+            ArtistCache.initialize(this@MainActivity)
+            ArtistSyncer.launchSync(this@MainActivity)
+            TagTypeCache.tagTypes.collect { tagMap ->
+                val newTags = tagMap.keys.toMutableList()
+                newTags.addAll(ArtistCache.getAllArtistNames())
+                allAvailableTags = newTags.distinct()
+            }
+        }
+
         observeViewModels()
 
         lifecycleScope.launch {
@@ -222,8 +230,6 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
                 }
             }
         }
-
-
     }
 
     private fun setupSearch() {
@@ -288,13 +294,12 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
                     putExtra("position", position)
                     putExtra("first_visible_position", firstVisible)
                     putExtra("last_visible_position", lastVisible)
-                    // 传递复选框状态
                     putExtra(EXTRA_RATING_S, ratingSCheckbox.isChecked)
                     putExtra(EXTRA_RATING_Q, ratingQCheckbox.isChecked)
                     putExtra(EXTRA_RATING_E, ratingECheckbox.isChecked)
                 }
 
-                val transitionName = "image_transition_${post.id}"
+                val transitionName = "image_transition_${'$'}{post.id}"
                 imageView.transitionName = transitionName
                 intent.putExtra("transition_name", transitionName)
 
@@ -312,17 +317,13 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
             StaggeredGridLayoutManager(2, StaggeredGridLayoutManager.VERTICAL)
         recyclerView.adapter = postAdapter
 
-        // 添加滚动监听器来控制浮动按钮的显示/隐藏
         recyclerView.addOnScrollListener(object : RecyclerView.OnScrollListener() {
             override fun onScrolled(recyclerView: RecyclerView, dx: Int, dy: Int) {
                 super.onScrolled(recyclerView, dx, dy)
-
                 val layoutManager = recyclerView.layoutManager as StaggeredGridLayoutManager
                 val firstVisiblePositions = IntArray(layoutManager.spanCount)
                 layoutManager.findFirstVisibleItemPositions(firstVisiblePositions)
                 val firstVisible = firstVisiblePositions.minOrNull() ?: 0
-
-                // 如果不在顶部（第一个可见项 > 0），显示按钮
                 if (firstVisible > 0) {
                     fabScrollToTop.show()
                     fabRefresh.show()
@@ -343,20 +344,15 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
 
     override fun onOptionsItemSelected(item: MenuItem): Boolean {
         val selectedPosts = postAdapter.getSelectedItems()
-
         return when (item.itemId) {
-
             R.id.action_download -> {
-
                 if (selectedPosts.isEmpty()) {
                     Toast.makeText(this, "No items selected", Toast.LENGTH_SHORT).show()
                     return true
                 }
-
                 selectedPosts.forEach { post ->
-                    downloadImage(this, post,false)
+                    downloadImage(this, post, false)
                 }
-
                 Toast.makeText(
                     this,
                     getString(
@@ -365,12 +361,10 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
                     ),
                     Toast.LENGTH_SHORT
                 ).show()
-
                 postAdapter.clearSelection()
                 hideSelectionMenu()
                 true
             }
-
             R.id.action_copy_links -> {
                 val clipboard = getSystemService(CLIPBOARD_SERVICE) as ClipboardManager
                 val links = selectedPosts.joinToString("\n") { it.file_url }
@@ -381,11 +375,9 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
                 hideSelectionMenu()
                 true
             }
-
             else -> super.onOptionsItemSelected(item)
         }
     }
-
 
     private fun showSelectionMenu(count: Int) {
         supportActionBar?.title = getString(R.string.items_selected, count)
@@ -402,23 +394,38 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
     }
 
     private fun addTag(tag: String) {
-        if (selectedTags.contains(tag)) return
-        selectedTags.add(tag)
+        val artistId = ArtistCache.getArtistId(tag)
+        val artist = artistId?.let { ArtistCache.getArtist(it) }
+
+        val originalName: String
+        val displayName: String
+
+        if (artist != null) {
+            originalName = artist.name
+            displayName = getArtistDisplayName(artist)
+        } else {
+            originalName = tag
+            displayName = tag
+        }
+
+        if (selectedTags.contains(originalName)) return
+        selectedTags.add(originalName)
 
         val chip = Chip(this).apply {
-            text = tag
+            text = displayName
             isCloseIconVisible = true
 
-            val typeNum = TagTypeCache.tagTypes.value[tag]
+            val typeNum = if (artist != null) 1 else TagTypeCache.tagTypes.value[tag]
+
             val color = when {
                 tag.startsWith("rating:s") -> "#4CAF50".toColorInt()
                 tag.startsWith("rating:q") -> "#FFC107".toColorInt()
                 tag.startsWith("rating:e") -> "#F44336".toColorInt()
-                typeNum == 1 -> "#F06292".toColorInt()
-                typeNum == 3 -> "#BA68C8".toColorInt()
-                typeNum == 4 -> "#7986CB".toColorInt()
-                typeNum == 5 -> "#4DB6AC".toColorInt()
-                typeNum == 0 -> "#90A4AE".toColorInt()
+                typeNum == 1 -> "#F06292".toColorInt() // Artist
+                typeNum == 3 -> "#BA68C8".toColorInt() // Copyright
+                typeNum == 4 -> "#7986CB".toColorInt() // Character
+                typeNum == 5 -> "#4DB6AC".toColorInt() // Style
+                typeNum == 0 -> "#90A4AE".toColorInt() // General
                 else -> "#BDBDBD".toColorInt()
             }
 
@@ -426,26 +433,23 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
             setTextColor(Color.WHITE)
 
             setOnCloseIconClickListener {
-                selectedTags.remove(tag)
+                selectedTags.remove(originalName)
                 tagChipGroup.removeView(this)
                 performSearch()
             }
 
             setOnLongClickListener {
                 val clipboard = context.getSystemService(CLIPBOARD_SERVICE) as ClipboardManager
-                val clip = ClipData.newPlainText("Tag", tag)
+                val clip = ClipData.newPlainText("Tag", originalName)
                 clipboard.setPrimaryClip(clip)
                 Toast.makeText(context, getString(R.string.tag_copied_to_clipboard), Toast.LENGTH_SHORT).show()
-
                 true
             }
         }
-
         tagChipGroup.addView(chip)
     }
 
     private fun observeViewModels() {
-        // 1️⃣ Post 列表分页
         lifecycleScope.launch {
             postViewModel.posts.collectLatest { pagingData ->
                 postAdapter.submitData(
@@ -453,16 +457,13 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
                         !isBlacklisted(post)
                     }
                 )
-                // 显式类型避免 Cannot infer type for T
             }
         }
 
-        // 2️⃣ 更新检查状态
         lifecycleScope.launch {
             updateViewModel.updateState.collect { state ->
                 when (state) {
                     is UpdateCheckState.UpdateAvailable -> {
-                        // 调用之前写好的 Dialog 函数
                         showUpdateDialog(state.release)
                     }
                     is UpdateCheckState.Error -> {
@@ -472,40 +473,25 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
                             Toast.LENGTH_LONG
                         ).show()
                     }
-                    else -> {} // UpToDate 等状态可以忽略
+                    else -> {}
                 }
             }
         }
 
-        // 3️⃣ 标签缓存
-        lifecycleScope.launch {
-            TagTypeCache.tagTypes.collect { tagMap ->
-                allAvailableTags = tagMap.keys.toList()
-            }
-        }
     }
-
 
     private fun filterFavorites(
         source: List<Post>,
         tags: List<String>
     ): List<Post> {
-
         if (tags.isEmpty()) return source
-
         return source.filter { post ->
-
             tags.all { tag ->
-
                 when {
-
-                    // rating 判断更健壮
                     tag.startsWith("rating:") -> {
                         val r = tag.removePrefix("rating:")
                         post.rating.equals(r, ignoreCase = true)
                     }
-
-                    // 普通 tag
                     else -> {
                         val postTags = post.tags.split(" ")
                         postTags.contains(tag)
@@ -514,46 +500,31 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
             }
         }
     }
-    private fun performSearch() {
 
-        // 收键盘
+    private fun performSearch() {
         val imm = getSystemService(INPUT_METHOD_SERVICE) as InputMethodManager
         imm.hideSoftInputFromWindow(searchBox.windowToken, 0)
-
-        // 保存复选框状态到 SharedPreferences
         saveCheckboxStates()
-
-        // 组装查询条件
         val queryTags = mutableListOf<String>()
         queryTags += selectedTags
-
         if (ratingSCheckbox.isChecked) queryTags += "rating:s"
         if (ratingQCheckbox.isChecked) queryTags += "rating:q"
         if (ratingECheckbox.isChecked) queryTags += "rating:e"
 
         when (currentMode) {
-
-            // ───── 普通模式 ─────
             FeedMode.NORMAL -> {
                 postViewModel.search(queryTags.joinToString(" "))
                 postViewModel.forceRefresh()
             }
-
-            // ───── 收藏模式（纯本地）─────
             FeedMode.FAVORITES -> {
                 lifecycleScope.launch {
-
-                    // 👉 每次都基于“完整收藏源”过滤，避免被上一次结果污染
                     val all = FavoritesManager.getAll(this@MainActivity)
-
                     val filtered = filterFavorites(all, queryTags)
-
                     val data = if (filtered.isEmpty()) {
                         PagingData.empty()
                     } else {
                         PagingData.from(filtered)
                     }
-
                     postAdapter.submitData(lifecycle, data)
                     recyclerView.scrollToPosition(0)
                 }
@@ -561,24 +532,17 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
         }
     }
 
-
-
     private fun showUpdateDialog(latestRelease: GitHubRelease) {
         lifecycleScope.launch {
-            // 1️⃣ 获取所有 release
             val allReleases = withContext(Dispatchers.IO) {
                 GitHubApiClient.api.getAllReleases("AliceJump", "YandeReViewer")
             }
-
-            // 2️⃣ 动态获取 APK 安装版本
             val currentVersion = try {
                 val pInfo = packageManager.getPackageInfo(packageName, 0)
                 pInfo.versionName ?: "0.0"
             } catch (_: Exception) {
                 "0.0"
             }
-
-            // 3️⃣ 过滤比当前版本新的 release
             val newerReleases = allReleases
                 .filter { isVersionNewer(it.tagName, currentVersion) }
                 .sortedBy { it.tagName }
@@ -587,7 +551,7 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
 
             // 4️⃣ 弹出 Dialog
             AlertDialog.Builder(this@MainActivity)
-                .setTitle("New Version Available: ${latestRelease.name}")
+                .setTitle("New Version Available: ${'$'}{latestRelease.name}")
                 .setMessage(changelog.ifEmpty { "No changelog available" })
                 .setPositiveButton("Update Now") { dialog, _ ->
                     val apkAsset = latestRelease.assets.firstOrNull { it.downloadUrl.endsWith(".apk") }
@@ -611,7 +575,6 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
         }
     }
 
-    /** 版本号比较函数 */
     private fun isVersionNewer(version: String, current: String): Boolean {
         val v1 = version.removePrefix("v").split(".").map { it.toIntOrNull() ?: 0 }
         val v2 = current.removePrefix("v").split(".").map { it.toIntOrNull() ?: 0 }
@@ -623,9 +586,6 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
         }
         return false
     }
-
-
-
 
     private fun startDownload(url: String, version: String) {
         val downloadManager = getSystemService(DOWNLOAD_SERVICE) as DownloadManager
@@ -652,20 +612,17 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
         startActivity(intent)
     }
 
-
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         handleIntent(intent)
     }
 
     private fun handleIntent(intent: Intent?) {
-        // 恢复复选框状态（如果有传递）
         if (intent?.hasExtra(EXTRA_RATING_S) == true) {
             ratingSCheckbox.isChecked = intent.getBooleanExtra(EXTRA_RATING_S, false)
             ratingQCheckbox.isChecked = intent.getBooleanExtra(EXTRA_RATING_Q, false)
             ratingECheckbox.isChecked = intent.getBooleanExtra(EXTRA_RATING_E, false)
         }
-
         intent?.getStringExtra(NEW_SEARCH_TAG)?.let { tag ->
             selectedTags.clear()
             tagChipGroup.removeAllViews()
@@ -674,7 +631,6 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
         }
     }
 
-    // 保存复选框状态到 SharedPreferences
     private fun saveCheckboxStates() {
         val prefs = getSharedPreferences("rating_state", MODE_PRIVATE)
         prefs.edit().apply {
@@ -687,7 +643,6 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
 
     override fun onStop() {
         super.onStop()
-        // 保存复选框状态
         saveCheckboxStates()
         TagTypeCache.flush(this)
     }
@@ -705,7 +660,6 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
             R.id.nav_favorite_images -> {
                 switchToFavorites()
             }
-
             R.id.nav_blacklist_tags -> {
                 startActivity(Intent(this, BlacklistActivity::class.java))
             }
@@ -714,70 +668,47 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
         drawerLayout.closeDrawer(GravityCompat.START)
         return true
     }
-    private fun switchToNormalMode() {
 
+    private fun switchToNormalMode() {
         currentMode = FeedMode.NORMAL
         supportActionBar?.title = getString(R.string.app_name)
-
         performSearch()
     }
-
-
-
 
     private fun switchToFavorites() {
         currentMode = FeedMode.FAVORITES
         supportActionBar?.title = getString(R.string.my_favorites)
-
         lifecycleScope.launch {
-
-            // 👉 直接拿完整 Post
             val allFavorites = FavoritesManager.getAll(this@MainActivity)
-
             if (allFavorites.isEmpty()) {
                 postAdapter.submitData(PagingData.empty())
                 return@launch
             }
-
-            // 👉 直接按收藏时间排序
             val sorted = allFavorites.sortedByDescending { it.favoriteAt }
-
-            // 👉 作为当前“数据源”
             favoriteSource = sorted
-
-            postAdapter.submitData(
-                PagingData.from(sorted)
-            )
+            postAdapter.submitData(PagingData.from(sorted))
         }
     }
 
     private fun setupBackPressedHandler() {
         onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
             override fun handleOnBackPressed() {
-                // 1️⃣ 侧边栏优先关闭
                 if (drawerLayout.isDrawerOpen(GravityCompat.START)) {
                     drawerLayout.closeDrawer(GravityCompat.START)
                     return
                 }
-
-                // 2️⃣ 如果在多选状态 → 先取消多选
                 if (postAdapter.isSelectionActive()) {
                     postAdapter.clearSelection()
                     hideSelectionMenu()
                     return
                 }
-
-                // 3️⃣ 👉 重点：如果当前是收藏模式 → 回到普通模式
                 if (currentMode == FeedMode.FAVORITES) {
                     switchToNormalMode()
                     return
                 }
-
-                // 4️⃣ 其他情况才是真正的"退出页面"
                 isEnabled = false
                 onBackPressedDispatcher.onBackPressed()
             }
         })
     }
-
 }

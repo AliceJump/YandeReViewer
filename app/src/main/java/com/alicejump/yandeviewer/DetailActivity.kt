@@ -1,5 +1,6 @@
 package com.alicejump.yandeviewer
-
+import com.alicejump.yandeviewer.viewmodel.ArtistCache
+import com.alicejump.yandeviewer.utils.getArtistDisplayName
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Intent
@@ -384,8 +385,17 @@ class DetailActivity : AppCompatActivity() {
         currentPostTags.forEach { tag ->
             val type = allTagTypes[tag] ?: -1 // 未获取的标签类型为 -1
 
+            // 如果是艺术家标签，尝试获取 Artist 对象并显示 displayName
+            val displayName = if (type == 1) { // 1 = Artist
+                val artistId = ArtistCache.getArtistId(tag)
+                val artist = artistId?.let { ArtistCache.getArtist(it) }
+                artist?.let { getArtistDisplayName(it) } ?: tag
+            } else {
+                tag
+            }
+
             val chip = Chip(this).apply {
-                text = tag
+                text = displayName
                 isClickable = true
                 isFocusable = true
             }
@@ -402,7 +412,7 @@ class DetailActivity : AppCompatActivity() {
                 startActivity(intent)
             }
 
-            // 长按 -> 复制到剪贴板
+            // 长按 -> 弹出菜单
             chip.setOnLongClickListener {
 
                 val options = arrayOf(
@@ -413,36 +423,28 @@ class DetailActivity : AppCompatActivity() {
 
                 AlertDialog.Builder(this)
                     .setItems(options) { _, which ->
-
                         when (which) {
-
                             0 -> {
                                 val clipboard =
                                     getSystemService(CLIPBOARD_SERVICE) as ClipboardManager
                                 val clip = ClipData.newPlainText("tag", tag)
                                 clipboard.setPrimaryClip(clip)
-
                                 Toast.makeText(
                                     this,
                                     R.string.tag_copied_to_clipboard,
                                     Toast.LENGTH_SHORT
                                 ).show()
                             }
-
                             1 -> {
                                 BlacklistManager.add(tag)
-
                                 Toast.makeText(
                                     this,
                                     getString(R.string.tag_added_to_blacklist, tag),
                                     Toast.LENGTH_SHORT
                                 ).show()
                             }
-
                             2 -> {
-                                // 收藏标签
                                 FavoriteTagsManager.addFavoriteTag(this, tag)
-
                                 Toast.makeText(
                                     this,
                                     "已收藏标签：$tag",
@@ -455,7 +457,6 @@ class DetailActivity : AppCompatActivity() {
 
                 true
             }
-
 
             // 根据标签类型添加到对应 ChipGroup
             when (type) {

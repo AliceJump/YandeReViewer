@@ -1,10 +1,13 @@
 package com.alicejump.yandeviewer
 
 import android.os.Bundle
+import com.alicejump.yandeviewer.viewmodel.ArtistCache
+import com.alicejump.yandeviewer.utils.getArtistDisplayName
 import android.widget.PopupMenu
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.widget.Toolbar
+import androidx.activity.OnBackPressedCallback
 import com.alicejump.yandeviewer.data.BlacklistManager
 import com.google.android.material.chip.Chip
 import com.google.android.material.chip.ChipGroup
@@ -17,17 +20,24 @@ class BlacklistActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_blacklist)
 
-        // 获取 header 中的 Toolbar 并设置
+        // Toolbar
         val headerView = findViewById<com.google.android.material.appbar.AppBarLayout>(R.id.appBarLayout)
         val toolbar: Toolbar? = headerView?.findViewById(R.id.toolbar)
-        if (toolbar != null) {
-            setSupportActionBar(toolbar)
+        toolbar?.let {
+            setSupportActionBar(it)
             supportActionBar?.title = getString(R.string.blacklist_tags)
         }
 
         chipGroup = findViewById(R.id.blacklist_chip_group)
-
         loadBlacklistTags()
+
+        // 使用 OnBackPressedDispatcher 替代 onBackPressed()
+        onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
+            override fun handleOnBackPressed() {
+                // 原来的逻辑
+                finish()
+            }
+        })
     }
 
     private fun loadBlacklistTags() {
@@ -47,13 +57,17 @@ class BlacklistActivity : AppCompatActivity() {
     }
 
     private fun createTagChip(tagName: String): Chip {
+        val displayName = ArtistCache.getArtistId(tagName)?.let { artistId ->
+            ArtistCache.getArtist(artistId)?.let { getArtistDisplayName(it) }
+        } ?: tagName
+
         return Chip(this).apply {
-            text = tagName
+            text = displayName
             isClickable = true
             isLongClickable = true
 
             setOnLongClickListener {
-                showTagContextMenu(this, tagName)
+                showTagContextMenu(this, tagName) // 操作仍用原始 tagName
                 true
             }
         }
@@ -81,11 +95,4 @@ class BlacklistActivity : AppCompatActivity() {
             show()
         }
     }
-
-    override fun onBackPressed() {
-        super.onBackPressed()
-        finish()
-    }
 }
-
-
