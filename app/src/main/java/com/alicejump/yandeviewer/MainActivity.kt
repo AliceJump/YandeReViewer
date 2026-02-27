@@ -367,7 +367,7 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
             }
             R.id.action_copy_links -> {
                 val clipboard = getSystemService(CLIPBOARD_SERVICE) as ClipboardManager
-                val links = selectedPosts.joinToString("\n") { it.file_url }
+                val links = selectedPosts.joinToString("\n\n") { it.file_url }
                 val clip = ClipData.newPlainText("Yande.re Links", links)
                 clipboard.setPrimaryClip(clip)
                 Toast.makeText(this, R.string.links_copied_to_clipboard, Toast.LENGTH_SHORT).show()
