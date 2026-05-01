@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Night-mode divider: semi-transparent white -->
+    <color name="divider">#1FFFFFFF</color>
+    <!-- Search box background (dark mode) -->
+    <color name="search_background">#2A2A2A</color>
+</resources>

@@ -30,15 +30,25 @@
             android:id="@+id/searchBox"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
+            android:layout_marginHorizontal="12dp"
+            android:layout_marginTop="8dp"
+            android:layout_marginBottom="4dp"
+            android:background="@drawable/search_box_background"
+            android:drawableStart="@drawable/ic_search"
+            android:drawablePadding="8dp"
             android:hint="@string/search_hint"
             android:imeOptions="actionSearch"
             android:inputType="text"
-            android:singleLine="true"/>
+            android:paddingHorizontal="12dp"
+            android:paddingVertical="10dp"
+            android:singleLine="true"
+            android:textSize="15sp"/>
 
         <!-- 已选标签区域 -->
         <HorizontalScrollView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
+            android:layout_marginHorizontal="12dp"
             android:scrollbars="none">
 
             <com.google.android.material.chip.ChipGroup
@@ -52,6 +62,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:paddingHorizontal="12dp"
+            android:paddingVertical="6dp"
             android:scrollbars="none"
             android:fillViewport="true">
 
@@ -59,20 +70,20 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:orientation="horizontal"
-                android:gravity="center_horizontal">
+                android:gravity="center_vertical">
 
                 <!-- S -->
                 <com.google.android.material.button.MaterialButton
                     android:id="@+id/rating_s_checkbox"
                     style="@style/Widget.MaterialComponents.Button.OutlinedButton"
                     android:layout_width="wrap_content"
-                    android:layout_height="40dp"
+                    android:layout_height="36dp"
                     android:layout_marginEnd="8dp"
                     android:text="@string/rating_s"
                     android:checkable="true"
                     android:singleLine="true"
                     android:ellipsize="none"
-                    app:cornerRadius="20dp"
+                    app:cornerRadius="18dp"
                     app:checkedIcon="@drawable/ic_check"
                     app:iconGravity="textStart"/>
 
@@ -81,13 +92,13 @@
                     android:id="@+id/rating_q_checkbox"
                     style="@style/Widget.MaterialComponents.Button.OutlinedButton"
                     android:layout_width="wrap_content"
-                    android:layout_height="40dp"
+                    android:layout_height="36dp"
                     android:layout_marginEnd="8dp"
                     android:text="@string/rating_q"
                     android:checkable="true"
                     android:singleLine="true"
                     android:ellipsize="none"
-                    app:cornerRadius="20dp"
+                    app:cornerRadius="18dp"
                     app:checkedIcon="@drawable/ic_check"
                     app:iconGravity="textStart"/>
 
@@ -96,12 +107,12 @@
                     android:id="@+id/rating_e_checkbox"
                     style="@style/Widget.MaterialComponents.Button.OutlinedButton"
                     android:layout_width="wrap_content"
-                    android:layout_height="40dp"
+                    android:layout_height="36dp"
                     android:text="@string/rating_e"
                     android:checkable="true"
                     android:singleLine="true"
                     android:ellipsize="none"
-                    app:cornerRadius="20dp"
+                    app:cornerRadius="18dp"
                     app:checkedIcon="@drawable/ic_check"
                     app:iconGravity="textStart"/>
             </LinearLayout>
@@ -134,7 +145,7 @@
                 android:layout_gravity="bottom|start"
                 android:layout_margin="16dp"
                 android:visibility="gone"
-                app:srcCompat="@android:drawable/ic_menu_upload"
+                app:srcCompat="@drawable/ic_arrow_upward_24"
                 android:contentDescription="@string/scroll_to_top"/>
 
             <!-- 刷新按钮 -->
@@ -145,7 +156,7 @@
                 android:layout_gravity="bottom|end"
                 android:layout_margin="16dp"
                 android:visibility="gone"
-                app:srcCompat="@android:drawable/ic_menu_rotate"
+                app:srcCompat="@drawable/ic_refresh_24"
                 android:contentDescription="@string/refresh"/>
 
         </FrameLayout>

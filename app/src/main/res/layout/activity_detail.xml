@@ -66,7 +66,7 @@
                 android:layout_width="0dp"
                 android:layout_height="1dp"
                 android:layout_marginVertical="12dp"
-                android:background="#33000000"
+                android:background="?attr/colorControlHighlight"
                 app:layout_constraintEnd_toEndOf="parent"
                 app:layout_constraintStart_toStartOf="parent"
                 app:layout_constraintTop_toBottomOf="@id/artist_tags_container" />
@@ -99,7 +99,7 @@
                 android:layout_width="0dp"
                 android:layout_height="1dp"
                 android:layout_marginVertical="12dp"
-                android:background="#33000000"
+                android:background="?attr/colorControlHighlight"
                 app:layout_constraintEnd_toEndOf="parent"
                 app:layout_constraintStart_toStartOf="parent"
                 app:layout_constraintTop_toBottomOf="@id/copyright_tags_container" />
@@ -132,7 +132,7 @@
                 android:layout_width="0dp"
                 android:layout_height="1dp"
                 android:layout_marginVertical="12dp"
-                android:background="#33000000"
+                android:background="?attr/colorControlHighlight"
                 app:layout_constraintEnd_toEndOf="parent"
                 app:layout_constraintStart_toStartOf="parent"
                 app:layout_constraintTop_toBottomOf="@id/character_tags_container" />
@@ -171,7 +171,7 @@
         android:contentDescription="@string/detail_source_button_text"
         android:visibility="gone"
         app:fabSize="mini"
-        app:srcCompat="@android:drawable/ic_menu_info_details"
+        app:srcCompat="@drawable/ic_info_24"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintStart_toStartOf="parent"/>
 
@@ -205,7 +205,7 @@
         android:layout_height="wrap_content"
         android:layout_margin="16dp"
         android:visibility="visible"
-        app:srcCompat="@android:drawable/star_off"
+        app:srcCompat="@drawable/ic_star_outline_24"
         android:contentDescription="@string/post_favorite"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent" />

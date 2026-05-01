@@ -354,9 +354,9 @@ class DetailActivity : AppCompatActivity() {
     // 更新收藏按钮状态
     private fun updateFavoriteButton(post: Post) {
         if (FavoritesManager.isFavorite(this, post.id)) {
-            favoriteFab.setImageResource(android.R.drawable.star_on)
+            favoriteFab.setImageResource(R.drawable.ic_star_filled_24)
         } else {
-            favoriteFab.setImageResource(android.R.drawable.star_off)
+            favoriteFab.setImageResource(R.drawable.ic_star_outline_24)
         }
     }
 
