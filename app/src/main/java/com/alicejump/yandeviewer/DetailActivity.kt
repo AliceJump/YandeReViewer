@@ -18,8 +18,6 @@ import android.widget.Toast
 import androidx.activity.OnBackPressedCallback
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
-import androidx.constraintlayout.widget.ConstraintLayout
-import androidx.constraintlayout.widget.ConstraintSet
 import androidx.core.graphics.createBitmap
 import androidx.core.net.toUri
 import androidx.core.view.children
@@ -51,6 +49,12 @@ class DetailActivity : AppCompatActivity() {
     private lateinit var sourceFab: FloatingActionButton
     private lateinit var favoriteFab: FloatingActionButton
     private var isExpanded = false
+    private var currentSource: String? = null
+
+    private companion object {
+        const val FAB_DRAWER_DISTANCE = 300f
+        const val FAB_ANIMATION_DURATION = 300L
+    }
 
 
     // 标签的标题
@@ -111,41 +115,79 @@ class DetailActivity : AppCompatActivity() {
         decorView.addView(snapshot, params)
         return snapshot
     }
-    private fun toggleFabDrawer() {
-        val distance = 300f // 按钮展开间距
-        if (!isExpanded) {
-            // 展开动画：向上弹出
-            sourceFab.visibility = View.VISIBLE
-            internalFab.visibility = View.VISIBLE
+    private fun hideDrawerFab(fab: FloatingActionButton) {
+        fab.animate().cancel()
+        fab.translationY = 0f
+        fab.alpha = 0f
+        fab.visibility = View.GONE
+    }
 
-            sourceFab.animate()
-                .translationY(-distance)   // 上移
-                .alpha(1f)
-                .setDuration(300)
-                .start()
+    private fun showDrawerFab(fab: FloatingActionButton, slot: Int, animate: Boolean) {
+        fab.animate().cancel()
+        fab.visibility = View.VISIBLE
 
-            internalFab.animate()
-                .translationY(-distance * 2)  // 再往上
+        val targetTranslationY = -FAB_DRAWER_DISTANCE * slot
+        if (animate) {
+            fab.animate()
+                .translationY(targetTranslationY)
                 .alpha(1f)
-                .setDuration(300)
+                .setDuration(FAB_ANIMATION_DURATION)
+                .withEndAction { }
                 .start()
         } else {
-            // 收回动画
-            sourceFab.animate()
-                .translationY(0f)
-                .alpha(0f)
-                .setDuration(300)
-                .withEndAction { sourceFab.visibility = View.GONE }
-                .start()
-
-            internalFab.animate()
-                .translationY(0f)
-                .alpha(0f)
-                .setDuration(300)
-                .withEndAction { internalFab.visibility = View.GONE }
-                .start()
+            fab.translationY = targetTranslationY
+            fab.alpha = 1f
         }
-        isExpanded = !isExpanded
+    }
+
+    private fun collapseDrawerFab(fab: FloatingActionButton) {
+        fab.animate().cancel()
+        if (fab.visibility != View.VISIBLE) {
+            hideDrawerFab(fab)
+            return
+        }
+
+        fab.animate()
+            .translationY(0f)
+            .alpha(0f)
+            .setDuration(FAB_ANIMATION_DURATION)
+            .withEndAction { fab.visibility = View.GONE }
+            .start()
+    }
+
+    private fun syncFabDrawerState() {
+        if (!isExpanded) {
+            hideDrawerFab(sourceFab)
+            hideDrawerFab(internalFab)
+            return
+        }
+
+        var slot = 1
+        if (currentSource != null) {
+            showDrawerFab(sourceFab, slot, animate = false)
+            slot++
+        } else {
+            hideDrawerFab(sourceFab)
+        }
+        showDrawerFab(internalFab, slot, animate = false)
+    }
+
+    private fun toggleFabDrawer() {
+        if (!isExpanded) {
+            isExpanded = true
+            var slot = 1
+            if (currentSource != null) {
+                showDrawerFab(sourceFab, slot, animate = true)
+                slot++
+            } else {
+                hideDrawerFab(sourceFab)
+            }
+            showDrawerFab(internalFab, slot, animate = true)
+        } else {
+            isExpanded = false
+            collapseDrawerFab(sourceFab)
+            collapseDrawerFab(internalFab)
+        }
     }
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -156,6 +198,7 @@ class DetailActivity : AppCompatActivity() {
         menuFab = findViewById(R.id.fab_menu)
         sourceFab = findViewById(R.id.fab_source)
         favoriteFab = findViewById(R.id.fab_favorite)
+        syncFabDrawerState()
 
         // ======= 点击菜单按钮展开/收起 =======
         menuFab.setOnClickListener {
@@ -250,8 +293,6 @@ class DetailActivity : AppCompatActivity() {
 
         // ====== 初始化 UI 元素 ======
         viewPager = findViewById(R.id.viewPager)
-        sourceFab = findViewById(R.id.fab_source)
-        favoriteFab = findViewById(R.id.fab_favorite)
 
         // 标签标题
         artistLabel = findViewById(R.id.artist_label)
@@ -398,47 +439,52 @@ class DetailActivity : AppCompatActivity() {
         return "https://www.pixiv.net/artworks/$illustId"
     }
 
+    private fun openSource(source: String) {
+        var url = source
+
+        // 先 Pixiv CDN → artworks
+        convertPixivImageUrlToArtwork(url)?.let {
+            url = it
+        }
+
+        // 没协议补 https
+        if (!url.startsWith("http://") && !url.startsWith("https://")) {
+            url = "https://$url"
+        }
+
+        // 再判断是不是可打开链接
+        if (Patterns.WEB_URL.matcher(url).matches()) {
+
+            val intent = Intent(Intent.ACTION_VIEW, url.toUri())
+            startActivity(intent)
+
+        } else {
+
+            // fallback 复制
+            val clipboard = getSystemService(ClipboardManager::class.java)
+            val clip = ClipData.newPlainText("source", source)
+            clipboard.setPrimaryClip(clip)
+
+            Toast.makeText(
+                this,
+                R.string.source_copied_to_clipboard,
+                Toast.LENGTH_SHORT
+            ).show()
+        }
+    }
+
     // 设置来源按钮逻辑
     private fun setupSourceButton(currentPost: Post) {
-        val source = currentPost.source
-        if (source.isNullOrBlank()) {
-            sourceFab.hide()
-        } else {
-            sourceFab.show()
-            sourceFab.setOnClickListener {
-                var url = source.trim()
+        val hadSource = currentSource != null
+        currentSource = currentPost.source?.trim()?.takeIf { it.isNotEmpty() }
 
-                // 先 Pixiv CDN → artworks
-                convertPixivImageUrlToArtwork(url)?.let {
-                    url = it
-                }
+        sourceFab.isEnabled = currentSource != null
+        sourceFab.setOnClickListener(currentSource?.let { source ->
+            View.OnClickListener { openSource(source) }
+        })
 
-                // 没协议补 https
-                if (!url.startsWith("http://") && !url.startsWith("https://")) {
-                    url = "https://$url"
-                }
-
-                // 再判断是不是可打开链接
-                if (Patterns.WEB_URL.matcher(url).matches()) {
-
-                    val intent = Intent(Intent.ACTION_VIEW, url.toUri())
-                    startActivity(intent)
-
-                } else {
-
-                    // fallback 复制
-                    val clipboard = getSystemService(ClipboardManager::class.java)
-                    val clip = ClipData.newPlainText("source", source)
-                    clipboard.setPrimaryClip(clip)
-
-                    Toast.makeText(
-                        this,
-                        R.string.source_copied_to_clipboard,
-                        Toast.LENGTH_SHORT
-                    ).show()
-                }
-
-            }
+        if (!isExpanded || hadSource != (currentSource != null)) {
+            syncFabDrawerState()
         }
     }
     // 设置标签显示逻辑
