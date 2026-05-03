@@ -13,15 +13,19 @@ import kotlinx.coroutines.flow.flatMapLatest
 @OptIn(ExperimentalCoroutinesApi::class)
 class PostViewModel : ViewModel() {
 
+    private val _enabled = MutableStateFlow(true)
     private val _query = MutableStateFlow("")
-    private val _refreshTrigger = MutableStateFlow(0)
 
-    val posts = _query
-        .flatMapLatest { query ->
-            _refreshTrigger.flatMapLatest {
-                Pager(PagingConfig(pageSize = 20)) {
-                    PostPagingSource(query)
-                }.flow
+    val posts = _enabled
+        .flatMapLatest { enabled ->
+            if (!enabled) {
+                kotlinx.coroutines.flow.emptyFlow()
+            } else {
+                _query.flatMapLatest { query ->
+                    Pager(PagingConfig(pageSize = 20)) {
+                        PostPagingSource(query)
+                    }.flow
+                }
             }
         }
         .cachedIn(viewModelScope)
@@ -30,8 +34,7 @@ class PostViewModel : ViewModel() {
         _query.value = query
     }
 
-    fun forceRefresh() {
-        _refreshTrigger.value += 1
+    fun enableSearch(enable: Boolean) {
+        _enabled.value = enable
     }
 }
-

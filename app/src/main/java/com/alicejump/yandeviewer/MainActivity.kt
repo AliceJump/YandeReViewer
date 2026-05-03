@@ -46,6 +46,7 @@ import androidx.swiperefreshlayout.widget.SwipeRefreshLayout
 import com.alicejump.yandeviewer.adapter.PostAdapter
 import com.alicejump.yandeviewer.data.BlacklistManager
 import com.alicejump.yandeviewer.data.FavoritesManager
+import com.alicejump.yandeviewer.data.BrowsingHistoryManager
 import com.alicejump.yandeviewer.model.Post
 import com.alicejump.yandeviewer.network.GitHubApiClient
 import com.alicejump.yandeviewer.network.GitHubRelease
@@ -96,11 +97,53 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
 
     enum class FeedMode {
         NORMAL,
-        FAVORITES
+        FAVORITES,
+        HISTORY
     }
 
     private var currentMode = FeedMode.NORMAL
+    private fun loadFeed() {
+        val queryTags = mutableListOf<String>()
+        queryTags += selectedTags
+        if (ratingSCheckbox.isChecked) queryTags += "rating:s"
+        if (ratingQCheckbox.isChecked) queryTags += "rating:q"
+        if (ratingECheckbox.isChecked) queryTags += "rating:e"
 
+        when (currentMode) {
+            FeedMode.NORMAL -> {
+                supportActionBar?.title = getString(R.string.app_name)
+                postViewModel.search(queryTags.joinToString(" "))
+            }
+
+            FeedMode.FAVORITES -> {
+                supportActionBar?.title = getString(R.string.my_favorites)
+                lifecycleScope.launch {
+                    val all = FavoritesManager.getAll(this@MainActivity)
+                    val filtered = filterFavorites(all, queryTags)
+                    postAdapter.submitData(lifecycle, PagingData.from(filtered))
+                }
+            }
+
+            FeedMode.HISTORY -> {
+                supportActionBar?.title = getString(R.string.history)
+                lifecycleScope.launch {
+                    val all = BrowsingHistoryManager.getAll(this@MainActivity)
+                    val filtered = filterFavorites(all, queryTags)
+                    postAdapter.submitData(lifecycle, PagingData.from(filtered))
+                }
+            }
+        }
+    }
+    private fun switchMode(mode: FeedMode) {
+        currentMode = mode
+
+        postViewModel.enableSearch(mode == FeedMode.NORMAL)
+
+        // ⭐ 强制关掉刷新动画（避免残留）
+        swipeRefreshLayout.isRefreshing = false
+
+        loadFeed()
+    }
     private fun isBlacklisted(post: Post): Boolean {
         val blacklist = BlacklistManager.getAll()
         if (blacklist.isEmpty()) return false
@@ -181,6 +224,7 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
         lifecycleScope.launch {
             postAdapter.loadStateFlow.collect { loadState ->
                 swipeRefreshLayout.isRefreshing =
+                    currentMode == FeedMode.NORMAL &&
                     loadState.refresh is androidx.paging.LoadState.Loading
             }
         }
@@ -205,32 +249,18 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
         fabRefresh = findViewById(R.id.fab_refresh)
 
         swipeRefreshLayout.setOnRefreshListener {
-            when (currentMode) {
-                FeedMode.NORMAL -> {
-                    performSearch()
-                    postAdapter.refresh()
-                }
-                FeedMode.FAVORITES -> {
-                    switchToFavorites()
-                }
-            }
+            postAdapter.refresh()
+        }
+
+        fabRefresh.setOnClickListener {
+            loadFeed()
+            postAdapter.refresh()
         }
 
         fabScrollToTop.setOnClickListener {
             recyclerView.smoothScrollToPosition(0)
         }
 
-        fabRefresh.setOnClickListener {
-            when (currentMode) {
-                FeedMode.NORMAL -> {
-                    performSearch()
-                    postAdapter.refresh()
-                }
-                FeedMode.FAVORITES -> {
-                    switchToFavorites()
-                }
-            }
-        }
     }
 
     private fun setupSearch() {
@@ -515,31 +545,7 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
         val imm = getSystemService(INPUT_METHOD_SERVICE) as InputMethodManager
         imm.hideSoftInputFromWindow(searchBox.windowToken, 0)
         saveCheckboxStates()
-        val queryTags = mutableListOf<String>()
-        queryTags += selectedTags
-        if (ratingSCheckbox.isChecked) queryTags += "rating:s"
-        if (ratingQCheckbox.isChecked) queryTags += "rating:q"
-        if (ratingECheckbox.isChecked) queryTags += "rating:e"
-
-        when (currentMode) {
-            FeedMode.NORMAL -> {
-                postViewModel.search(queryTags.joinToString(" "))
-                postViewModel.forceRefresh()
-            }
-            FeedMode.FAVORITES -> {
-                lifecycleScope.launch {
-                    val all = FavoritesManager.getAll(this@MainActivity)
-                    val filtered = filterFavorites(all, queryTags)
-                    val data = if (filtered.isEmpty()) {
-                        PagingData.empty()
-                    } else {
-                        PagingData.from(filtered)
-                    }
-                    postAdapter.submitData(lifecycle, data)
-                    recyclerView.scrollToPosition(0)
-                }
-            }
-        }
+        loadFeed()
     }
 
     private fun showUpdateDialog(latestRelease: GitHubRelease) {
@@ -667,37 +673,14 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
             R.id.nav_favorite_tags -> {
                 startActivity(Intent(this, FavoriteTagsActivity::class.java))
             }
-            R.id.nav_favorite_images -> {
-                switchToFavorites()
-            }
             R.id.nav_blacklist_tags -> {
                 startActivity(Intent(this, BlacklistActivity::class.java))
             }
-            R.id.nav_history -> startActivity(Intent(this, BrowsingHistoryActivity::class.java))
+            R.id.nav_favorite_images -> switchMode(FeedMode.FAVORITES)
+            R.id.nav_history -> switchMode(FeedMode.HISTORY)
         }
         drawerLayout.closeDrawer(GravityCompat.START)
         return true
-    }
-
-    private fun switchToNormalMode() {
-        currentMode = FeedMode.NORMAL
-        supportActionBar?.title = getString(R.string.app_name)
-        performSearch()
-    }
-
-    private fun switchToFavorites() {
-        currentMode = FeedMode.FAVORITES
-        supportActionBar?.title = getString(R.string.my_favorites)
-        lifecycleScope.launch {
-            val allFavorites = FavoritesManager.getAll(this@MainActivity)
-            if (allFavorites.isEmpty()) {
-                postAdapter.submitData(PagingData.empty())
-                return@launch
-            }
-            val sorted = allFavorites.sortedByDescending { it.favoriteAt }
-            favoriteSource = sorted
-            postAdapter.submitData(PagingData.from(sorted))
-        }
     }
 
     private fun setupBackPressedHandler() {
@@ -712,8 +695,8 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
                     hideSelectionMenu()
                     return
                 }
-                if (currentMode == FeedMode.FAVORITES) {
-                    switchToNormalMode()
+                if (currentMode != FeedMode.NORMAL) {
+                    switchMode(FeedMode.NORMAL)
                     return
                 }
                 isEnabled = false
