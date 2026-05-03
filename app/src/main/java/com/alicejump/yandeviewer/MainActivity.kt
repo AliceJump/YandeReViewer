@@ -95,6 +95,8 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
     private var allAvailableTags: List<String> = emptyList()
     private var downloadId: Long = 0
 
+    private var lastClickTime: Long = 0
+
     enum class FeedMode {
         NORMAL,
         FAVORITES,
@@ -175,7 +177,7 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
     companion object {
         const val NEW_SEARCH_TAG = "NEW_SEARCH_TAG"
         const val EXTRA_RATING_S = "extra_rating_s"
-        const val EXTRA_RATING_Q = "extra_rating_q"
+        const val EXTRA_RATING_Q = "extra_rating_Q"
         const val EXTRA_RATING_E = "extra_rating_e"
     }
 
@@ -310,6 +312,10 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
     private fun setupRecyclerView() {
         postAdapter = PostAdapter(
             onPostClick = { post, position, imageView ->
+                val currentTime = System.currentTimeMillis()
+                if (currentTime - lastClickTime < 500) return@PostAdapter
+                lastClickTime = currentTime
+
                 val layoutManager = recyclerView.layoutManager as StaggeredGridLayoutManager
                 val firstVisiblePositions = IntArray(layoutManager.spanCount)
                 layoutManager.findFirstVisibleItemPositions(firstVisiblePositions)
