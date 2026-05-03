@@ -172,7 +172,7 @@
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent">
 
-        <!-- 收藏按钮（左侧，不带弹出） -->
+        <!-- 收藏按钮（右下角，不带弹出） -->
         <com.google.android.material.floatingactionbutton.FloatingActionButton
             android:id="@+id/fab_favorite"
             android:layout_width="wrap_content"
@@ -182,10 +182,10 @@
             android:visibility="visible"
             app:srcCompat="@drawable/ic_star_outline_24"
             app:layout_constraintBottom_toBottomOf="parent"
-            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintTop_toTopOf="parent" />
 
-        <!-- 菜单按钮（右侧，带弹出） -->
+        <!-- 菜单按钮（左下角，带弹出） -->
         <com.google.android.material.floatingactionbutton.FloatingActionButton
             android:id="@+id/fab_menu"
             android:layout_width="wrap_content"
@@ -195,7 +195,7 @@
             android:visibility="visible"
             app:srcCompat="@drawable/ic_baseline_menu_24"
             app:layout_constraintBottom_toBottomOf="parent"
-            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toTopOf="parent" />
 
         <!--
@@ -213,7 +213,7 @@
             app:fabSize="mini"
             app:srcCompat="@drawable/ic_info_24"
             app:layout_constraintBottom_toBottomOf="parent"
-            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toTopOf="parent" />
 
         <com.google.android.material.floatingactionbutton.FloatingActionButton
@@ -226,7 +226,7 @@
             app:fabSize="mini"
             app:srcCompat="@drawable/baseline_arrow_outward_24"
             app:layout_constraintBottom_toBottomOf="parent"
-            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toTopOf="parent" />
 
     </androidx.constraintlayout.widget.ConstraintLayout>
