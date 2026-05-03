@@ -1,33 +1,31 @@
+# GitHub Actions 工作流的名称
 name: Android CI Build and Release
 
+# 工作流的触发条件
 on:
-  # 手动触发
   workflow_dispatch:
-
-  # PR 创建 / 更新
-  pull_request:
-    types: [opened, synchronize, reopened]
-
-  # 打 tag 发布
   push:
     tags:
       - 'v*'
 
+# 定义工作流中要运行的任务
 jobs:
   build-and-release:
+    # 指定任务运行的操作系统环境
     runs-on: ubuntu-latest
 
     permissions:
       contents: write
 
+    # 定义任务中的各个步骤
     steps:
-      # 1. 拉代码
+      # 1. 检出代码 (需要完整历史来找到上一个 tag)
       - name: Checkout code
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
-      # 2. JDK
+      # 2. 设置 JDK 17
       - name: Set up JDK 17
         uses: actions/setup-java@v4
         with:
@@ -35,53 +33,52 @@ jobs:
           distribution: 'temurin'
           cache: gradle
 
-      # 3. 解码签名（只有 release 才需要，但这里放着也没问题）
+      # 3. 解码并放置签名密钥
       - name: Decode and place keystore
         run: |
           echo "${{ secrets.SIGNING_KEY_STORE_BASE64 }}" | base64 --decode > $HOME/keystore.jks
 
-      # 4. 版本号处理（tag / dev）
+      # 4. 从 Git 标签中提取版本号并更新 gradle.properties
       - name: Update Version Name in gradle.properties
         run: |
-          if [[ "${{ github.ref_type }}" == "tag" ]]; then
-            VERSION_NAME=${{ github.ref_name }}
-            VERSION_NAME=${VERSION_NAME#v}
-          else
-            VERSION_NAME="dev-${{ github.run_number }}"
-          fi
-
+          VERSION_NAME=${{ github.ref_name }}
+          VERSION_NAME=${VERSION_NAME#v}
           echo "Updating appVersionName to $VERSION_NAME"
+          # 使用更健壮的 sed 命令，忽略等号周围的空格
           sed -i "s/^appVersionName\s*=.*/appVersionName=$VERSION_NAME/" gradle.properties
 
-      # 5. gradlew 权限
+      # 5. 让 gradlew 文件拥有可执行权限
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
 
-      # 6. 构建（核心：PR=Debug，Tag=Release）
-      - name: Build APK
+      # 6. 执行 Gradle 签名打包
+      - name: Build and sign Release APK
         run: |
-          if [[ "${{ github.ref_type }}" == "tag" ]]; then
-            echo "🔧 Building RELEASE APK"
-            export SIGNING_KEY_STORE_PATH="$HOME/keystore.jks"
-            export SIGNING_STORE_PASSWORD="${{ secrets.SIGNING_STORE_PASSWORD }}"
-            export SIGNING_KEY_ALIAS="${{ secrets.SIGNING_KEY_ALIAS }}"
-            export SIGNING_KEY_PASSWORD="${{ secrets.SIGNING_KEY_PASSWORD }}"
-            ./gradlew assembleRelease
-          else
-            echo "🧪 Building DEBUG APK"
-            ./gradlew assembleDebug
-          fi
+          export SIGNING_KEY_STORE_PATH="$HOME/keystore.jks"
+          export SIGNING_STORE_PASSWORD="${{ secrets.SIGNING_STORE_PASSWORD }}"
+          export SIGNING_KEY_ALIAS="${{ secrets.SIGNING_KEY_ALIAS }}"
+          export SIGNING_KEY_PASSWORD="${{ secrets.SIGNING_KEY_PASSWORD }}"
+          ./gradlew assembleRelease
 
-      # 7. 上传 PR / 手动构建产物（Debug APK）
-      - name: Upload Debug APK Artifact
-        if: github.ref_type != 'tag'
-        uses: actions/upload-artifact@v4
-        with:
-          name: app-debug-apk
-          path: app/build/outputs/apk/debug/app-debug.apk
-
-      # 8. 生成 Release Notes（仅 tag）
+      # 7. 生成发布说明
       - name: Generate release notes
+        id: generate_release_notes
+        run: |
+          CHANGELOG=$(git log -1 --pretty=format:"* %s (%h)" ${{ github.ref_name }})
+          echo "Changelog:"
+          echo "$CHANGELOG"
+          echo "changelog<<EOF" >> $GITHUB_OUTPUT
+          echo "$CHANGELOG" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
+      # 8. 创建 Release 并上传 APK
+      - name: Create Release and Upload APK
+        uses: ncipollo/release-action@v1
+        with:
+          artifacts: "app/build/outputs/apk/release/app-release.apk"
+          tag: ${{ github.ref_name }}
+          body: ${{ steps.generate_release_notes.outputs.changelog }}
+          token: ${{ secrets.GITHUB_TOKEN }}      - name: Generate release notes
         if: github.ref_type == 'tag'
         id: generate_release_notes
         run: |
