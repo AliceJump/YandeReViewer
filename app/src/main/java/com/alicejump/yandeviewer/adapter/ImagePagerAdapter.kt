@@ -66,13 +66,13 @@ class ImagePagerAdapter(private val posts: List<Post>) : RecyclerView.Adapter<Im
             // 手势拖拽、长按与点击逻辑
             val handler = Handler(Looper.getMainLooper())
             var isDragging = false
-            var downTime = 100L
+            var downTime = 200L
             var startX = 0f
             var startY = 0f
             var isSwiping = false
             val dragTriggerDelayMillis = 1000L // 触发拖拽的延迟时间（1秒）
             // 最小短按阈值：避免滑动松手时误触发点击（150ms）
-            val minPressThresholdMillis = 150L
+            val minPressThresholdMillis = 1L
 
             // Runnable，用于延迟触发拖拽
             val dragRunnable = Runnable {
