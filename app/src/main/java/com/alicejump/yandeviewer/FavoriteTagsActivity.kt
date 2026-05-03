@@ -17,6 +17,8 @@ import com.alicejump.yandeviewer.network.RetrofitClient
 import com.alicejump.yandeviewer.viewmodel.ArtistCache
 import com.alicejump.yandeviewer.utils.getArtistDisplayName
 import com.alicejump.yandeviewer.viewmodel.TagTypeCache
+import com.google.android.material.chip.Chip
+import com.google.android.material.chip.ChipGroup
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -27,8 +29,11 @@ class FavoriteTagsActivity : AppCompatActivity() {
 
     private lateinit var recyclerView: RecyclerView
     private lateinit var adapter: FavoriteTagAdapter
-    
+    private lateinit var filterChipGroup: ChipGroup
+
     private var currentItems = mutableListOf<FavoriteTagItem>()
+    // 当前筛选类型：-1=全部，1=Artist，3=Copyright，4=Character
+    private var currentFilterType: Int = -1
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -42,9 +47,12 @@ class FavoriteTagsActivity : AppCompatActivity() {
             supportActionBar?.setDisplayHomeAsUpEnabled(true)
         }
 
+        filterChipGroup = findViewById(R.id.filterChipGroup)
+        setupFilterChips()
+
         recyclerView = findViewById(R.id.favoriteTagsRecyclerView)
         recyclerView.setHasFixedSize(true)
-        
+
         adapter = FavoriteTagAdapter(
             onTagClick = { tag ->
                 startActivity(Intent(this, MainActivity::class.java).apply {
@@ -64,6 +72,43 @@ class FavoriteTagsActivity : AppCompatActivity() {
         loadFavoriteTags()
     }
 
+    private fun setupFilterChips() {
+        val filters = listOf(
+            getString(R.string.filter_all) to -1,
+            getString(R.string.filter_artist) to 1,
+            getString(R.string.filter_copyright) to 3,
+            getString(R.string.filter_character) to 4
+        )
+
+        filters.forEachIndexed { index, (label, typeCode) ->
+            val chip = Chip(this).apply {
+                text = label
+                isCheckable = true
+                isChecked = (index == 0)
+                setOnCheckedChangeListener { _, isChecked ->
+                    if (isChecked) {
+                        currentFilterType = typeCode
+                        applyFilter()
+                    }
+                }
+            }
+            filterChipGroup.addView(chip)
+        }
+    }
+
+    private fun applyFilter() {
+        val allTagTypes = TagTypeCache.tagTypes.value
+        val filtered = if (currentFilterType == -1) {
+            currentItems.toList()
+        } else {
+            currentItems.filter { item ->
+                val type = allTagTypes[item.tag] ?: -1
+                type == currentFilterType
+            }
+        }
+        adapter.submitList(filtered)
+    }
+
     private fun loadFavoriteTags() {
         lifecycleScope.launch {
             // 1. 极其轻量级的初始化：直接读取标签字符串，不做任何转换
@@ -78,12 +123,12 @@ class FavoriteTagsActivity : AppCompatActivity() {
             }
 
             // 2. 瞬间渲染基础框架（displayName 直接用 tag 名）
-            currentItems = favoriteTags.map { 
-                FavoriteTagItem(it, it, emptyList(), isLoading = true) 
+            currentItems = favoriteTags.map {
+                FavoriteTagItem(it, it, emptyList(), isLoading = true)
             }.toMutableList()
-            adapter.submitList(currentItems.toList())
+            applyFilter()
 
-            // 3. 在后台逐个“增强”信息（如查询艺术家实名）并加载图片
+            // 3. 在后台逐个"增强"信息（如查询艺术家实名）并加载图片
             startAsyncEnhancementAndLoading()
         }
     }
@@ -128,7 +173,7 @@ class FavoriteTagsActivity : AppCompatActivity() {
                 if (updatedIndices.isNotEmpty()) {
                     updatedIndices.clear()
                     withContext(Dispatchers.Main) {
-                        adapter.submitList(currentItems.toList())
+                        applyFilter()
                     }
                 }
                 if (currentItems.none { it.isLoading } && updatedIndices.isEmpty()) break

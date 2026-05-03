@@ -29,6 +29,7 @@
         <activity android:name=".PhotoViewActivity" />
         <activity android:name=".BlacklistActivity" />
         <activity android:name=".FavoriteTagsActivity" />
+        <activity android:name=".BrowsingHistoryActivity" />
 
         <provider
             android:name="androidx.core.content.FileProvider"
