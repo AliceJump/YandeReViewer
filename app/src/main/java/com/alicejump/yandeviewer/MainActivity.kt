@@ -673,7 +673,7 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
             R.id.nav_blacklist_tags -> {
                 startActivity(Intent(this, BlacklistActivity::class.java))
             }
-            R.id.nav_history -> Toast.makeText(this, R.string.history_clicked, Toast.LENGTH_SHORT).show()
+            R.id.nav_history -> startActivity(Intent(this, BrowsingHistoryActivity::class.java))
         }
         drawerLayout.closeDrawer(GravityCompat.START)
         return true

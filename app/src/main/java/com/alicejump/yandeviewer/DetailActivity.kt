@@ -4,8 +4,10 @@ import com.alicejump.yandeviewer.utils.getArtistDisplayName
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Intent
+import android.content.res.ColorStateList
 import android.content.res.Configuration
 import android.graphics.Canvas
+import android.graphics.Color
 import android.os.Bundle
 import android.util.Patterns
 import android.view.MenuItem
@@ -26,6 +28,7 @@ import androidx.recyclerview.widget.RecyclerView
 import androidx.viewpager2.widget.ViewPager2
 import com.alicejump.yandeviewer.adapter.ImagePagerAdapter
 import com.alicejump.yandeviewer.data.BlacklistManager
+import com.alicejump.yandeviewer.data.BrowsingHistoryManager
 import com.alicejump.yandeviewer.data.FavoritesManager
 import com.alicejump.yandeviewer.data.FavoriteTagsManager
 import com.alicejump.yandeviewer.model.Post
@@ -406,6 +409,9 @@ class DetailActivity : AppCompatActivity() {
         val currentPost = posts[position]
         val tagsToFetch = currentPost.tags.split(" ").toSet()
 
+        // 记录浏览历史
+        BrowsingHistoryManager.recordView(this, currentPost)
+
         // 立即渲染当前缓存的标签
         setupTags(tagsToFetch, TagTypeCache.tagTypes.value)
         setupSourceButton(currentPost)
@@ -507,10 +513,16 @@ class DetailActivity : AppCompatActivity() {
                 tag
             }
 
+            val isFavorited = FavoriteTagsManager.isFavorite(this, tag)
             val chip = Chip(this).apply {
                 text = displayName
                 isClickable = true
                 isFocusable = true
+                // 已收藏的标签用金色高亮显示
+                if (isFavorited) {
+                    chipBackgroundColor = ColorStateList.valueOf(Color.parseColor("#FBC02D"))
+                    setTextColor(Color.WHITE)
+                }
             }
 
             // 点击 -> 跳转 MainActivity 搜索该标签
@@ -527,11 +539,16 @@ class DetailActivity : AppCompatActivity() {
 
             // 长按 -> 弹出菜单
             chip.setOnLongClickListener {
+                val alreadyFavorited = FavoriteTagsManager.isFavorite(this, tag)
+                val favoriteLabel = if (alreadyFavorited)
+                    getString(R.string.remove_favorite_tag)
+                else
+                    getString(R.string.favorite_tag)
 
                 val options = arrayOf(
                     getString(R.string.copy_tag),
                     getString(R.string.add_to_blacklist),
-                    getString(R.string.favorite_tag)
+                    favoriteLabel
                 )
 
                 AlertDialog.Builder(this)
@@ -557,12 +574,23 @@ class DetailActivity : AppCompatActivity() {
                                 ).show()
                             }
                             2 -> {
-                                FavoriteTagsManager.addFavoriteTag(this, tag)
-                                Toast.makeText(
-                                    this,
-                                    getString(R.string.tag_favorited, tag),
-                                    Toast.LENGTH_SHORT
-                                ).show()
+                                if (alreadyFavorited) {
+                                    FavoriteTagsManager.removeFavoriteTag(this, tag)
+                                    Toast.makeText(
+                                        this,
+                                        getString(R.string.removed_from_favorites_with_tag_name, tag),
+                                        Toast.LENGTH_SHORT
+                                    ).show()
+                                } else {
+                                    FavoriteTagsManager.addFavoriteTag(this, tag)
+                                    Toast.makeText(
+                                        this,
+                                        getString(R.string.tag_favorited, tag),
+                                        Toast.LENGTH_SHORT
+                                    ).show()
+                                }
+                                // 刷新标签显示，更新收藏颜色
+                                setupTags(currentPostTags, allTagTypes)
                             }
                         }
                     }

@@ -76,4 +76,12 @@
     <string name="downloading_post">Downloading Post %d</string>
     <string name="site_page">Site Page</string>
     <string name="menu_button">Menu</string>
+    <string name="no_history_yet">No browsing history yet</string>
+    <string name="history_cleared">History cleared</string>
+    <string name="clear_history_confirm">Clear all browsing history?</string>
+    <string name="tag_favorited_chip_desc">Favorited tag</string>
+    <string name="filter_all">All</string>
+    <string name="filter_artist">Artist</string>
+    <string name="filter_copyright">Copyright</string>
+    <string name="filter_character">Character</string>
 </resources>

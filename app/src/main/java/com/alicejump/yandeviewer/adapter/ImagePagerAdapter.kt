@@ -3,9 +3,14 @@ package com.alicejump.yandeviewer.adapter
 import android.annotation.SuppressLint
 import android.app.Activity
 import android.content.ClipData
+import android.content.Context
 import android.content.Intent
+import android.os.Build
 import android.os.Handler
 import android.os.Looper
+import android.os.VibrationEffect
+import android.os.Vibrator
+import android.os.VibratorManager
 import android.view.*
 import android.widget.ImageView
 import android.widget.Toast
@@ -64,12 +69,17 @@ class ImagePagerAdapter(private val posts: List<Post>) : RecyclerView.Adapter<Im
             var downTime = 100L
             var startX = 0f
             var startY = 0f
+            var isSwiping = false
             val dragTriggerDelayMillis = 1000L // 触发拖拽的延迟时间（1秒）
+            // 最小短按阈值：避免滑动松手时误触发点击（150ms）
+            val minPressThresholdMillis = 150L
 
             // Runnable，用于延迟触发拖拽
             val dragRunnable = Runnable {
-                isDragging = true
-                startDrag(imageView, post)
+                if (!isSwiping) {
+                    isDragging = true
+                    startDrag(imageView, post)
+                }
             }
 
             // 设置触摸监听
@@ -81,6 +91,7 @@ class ImagePagerAdapter(private val posts: List<Post>) : RecyclerView.Adapter<Im
                         startX = event.x
                         startY = event.y
                         isDragging = false
+                        isSwiping = false
                         // 延迟触发拖拽
                         handler.postDelayed(dragRunnable, dragTriggerDelayMillis)
                         true // 必须返回 true 才能接收后续事件
@@ -89,23 +100,30 @@ class ImagePagerAdapter(private val posts: List<Post>) : RecyclerView.Adapter<Im
                     MotionEvent.ACTION_UP -> {
                         // 取消拖拽 Runnable
                         handler.removeCallbacks(dragRunnable)
-                        if (!isDragging) {
+                        if (!isDragging && !isSwiping) {
                             val pressDuration = System.currentTimeMillis() - downTime
-                            if (pressDuration < ViewConfiguration.getTapTimeout()) {
-                                // 短按 -> 点击查看大图
-                                val context = itemView.context
-                                val intent = Intent(context, PhotoViewActivity::class.java).apply {
-                                    putExtra("file_url", post.file_url)
-                                    putExtra("preview_url", post.preview_url)
-                                    putExtra("transition_name", transitionName)
+                            when {
+                                pressDuration < minPressThresholdMillis -> {
+                                    // 极短按（< 150ms）忽略，避免滑动误触
                                 }
-                                val options = ActivityOptionsCompat.makeSceneTransitionAnimation(
-                                    context as Activity, imageView, transitionName
-                                )
-                                context.startActivity(intent, options.toBundle())
-                            } else {
-                                // 短长按 -> 下载图片
-                                downloadImage(view.context, post)
+                                pressDuration < ViewConfiguration.getLongPressTimeout() -> {
+                                    // 短按 -> 点击查看大图
+                                    val context = itemView.context
+                                    val intent = Intent(context, PhotoViewActivity::class.java).apply {
+                                        putExtra("file_url", post.file_url)
+                                        putExtra("preview_url", post.preview_url)
+                                        putExtra("transition_name", transitionName)
+                                    }
+                                    val options = ActivityOptionsCompat.makeSceneTransitionAnimation(
+                                        context as Activity, imageView, transitionName
+                                    )
+                                    context.startActivity(intent, options.toBundle())
+                                }
+                                else -> {
+                                    // 稳定长按（>= LongPressTimeout）-> 下载图片，并给短震动反馈
+                                    vibrateShort(view.context)
+                                    downloadImage(view.context, post)
+                                }
                             }
                         }
                         isDragging = false // 重置状态
@@ -116,6 +134,7 @@ class ImagePagerAdapter(private val posts: List<Post>) : RecyclerView.Adapter<Im
                         // 判断是否超过滑动阈值，如果滑动则取消拖拽
                         val slop = ViewConfiguration.get(view.context).scaledTouchSlop
                         if (abs(event.x - startX) > slop || abs(event.y - startY) > slop) {
+                            isSwiping = true
                             handler.removeCallbacks(dragRunnable)
                         }
                         false // 允许 ViewPager2 滑动
@@ -124,10 +143,27 @@ class ImagePagerAdapter(private val posts: List<Post>) : RecyclerView.Adapter<Im
                     MotionEvent.ACTION_CANCEL -> {
                         handler.removeCallbacks(dragRunnable)
                         isDragging = false // 重置状态
+                        isSwiping = false
                         true
                     }
 
                     else -> false
+                }
+            }
+        }
+
+        private fun vibrateShort(context: Context) {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                val manager = context.getSystemService(Context.VIBRATOR_MANAGER_SERVICE) as VibratorManager
+                manager.defaultVibrator.vibrate(VibrationEffect.createOneShot(30, VibrationEffect.DEFAULT_AMPLITUDE))
+            } else {
+                @Suppress("DEPRECATION")
+                val vibrator = context.getSystemService(Context.VIBRATOR_SERVICE) as Vibrator
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                    vibrator.vibrate(VibrationEffect.createOneShot(30, VibrationEffect.DEFAULT_AMPLITUDE))
+                } else {
+                    @Suppress("DEPRECATION")
+                    vibrator.vibrate(30)
                 }
             }
         }
