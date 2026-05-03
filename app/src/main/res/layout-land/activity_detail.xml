@@ -193,7 +193,6 @@
             android:visibility="visible"
             app:srcCompat="@drawable/ic_star_outline_24"
             app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toTopOf="parent" />
 
         <!-- 右下：菜单按钮（带弹出） -->
@@ -206,8 +205,7 @@
             android:visibility="visible"
             app:srcCompat="@drawable/ic_baseline_menu_24"
             app:layout_constraintBottom_toBottomOf="parent"
-            app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintStart_toStartOf="parent" />
+            app:layout_constraintEnd_toEndOf="parent" />
 
         <!--
             来源按钮 / 站内页按钮：初始位置与 fab_menu 重叠（visibility=gone），
@@ -224,8 +222,7 @@
             app:fabSize="mini"
             app:srcCompat="@drawable/ic_info_24"
             app:layout_constraintBottom_toBottomOf="parent"
-            app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintStart_toStartOf="parent" />
+            app:layout_constraintEnd_toEndOf="parent" />
 
         <com.google.android.material.floatingactionbutton.FloatingActionButton
             android:id="@+id/fab_internal"
@@ -237,8 +234,7 @@
             app:fabSize="mini"
             app:srcCompat="@drawable/baseline_arrow_outward_24"
             app:layout_constraintBottom_toBottomOf="parent"
-            app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintStart_toStartOf="parent" />
+            app:layout_constraintEnd_toEndOf="parent" />
 
     </androidx.constraintlayout.widget.ConstraintLayout>
 
