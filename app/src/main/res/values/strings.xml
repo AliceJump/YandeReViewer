@@ -79,6 +79,7 @@
     <string name="no_history_yet">No browsing history yet</string>
     <string name="history_cleared">History cleared</string>
     <string name="clear_history_confirm">Clear all browsing history?</string>
+    <string name="clear_history">Clear History</string>
     <string name="tag_favorited_chip_desc">Favorited tag</string>
     <string name="filter_all">All</string>
     <string name="filter_artist">Artist</string>

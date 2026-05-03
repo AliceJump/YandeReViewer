@@ -2,6 +2,8 @@ package com.alicejump.yandeviewer
 
 import android.content.Intent
 import android.os.Bundle
+import android.view.Menu
+import android.view.MenuItem
 import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
@@ -81,6 +83,21 @@ class BrowsingHistoryActivity : AppCompatActivity() {
             } else {
                 postAdapter.submitData(lifecycle, PagingData.from(history))
             }
+        }
+    }
+
+    override fun onCreateOptionsMenu(menu: Menu): Boolean {
+        menuInflater.inflate(R.menu.history_menu, menu)
+        return true
+    }
+
+    override fun onOptionsItemSelected(item: MenuItem): Boolean {
+        return when (item.itemId) {
+            R.id.action_clear_history -> {
+                showClearHistoryDialog()
+                true
+            }
+            else -> super.onOptionsItemSelected(item)
         }
     }
 

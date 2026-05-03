@@ -14,6 +14,7 @@ object BrowsingHistoryManager {
     fun recordView(context: Context, post: Post) {
         val list = getAll(context).toMutableList()
         list.removeAll { it.id == post.id }
+        // favoriteAt is reused here as the "viewed at" timestamp since Post is a shared Parcelable
         val newPost = post.copy(favoriteAt = System.currentTimeMillis())
         list.add(0, newPost)
         if (list.size > MAX_HISTORY) {
