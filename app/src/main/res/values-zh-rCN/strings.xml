@@ -76,4 +76,8 @@
     <string name="downloading_post">正在下载帖子 %d</string>
     <string name="site_page">站内页面</string>
     <string name="menu_button">菜单</string>
+    <string name="filter_all">全部</string>
+    <string name="filter_artist">画师</string>
+    <string name="filter_copyright">作品</string>
+    <string name="filter_character">角色</string>
 </resources>

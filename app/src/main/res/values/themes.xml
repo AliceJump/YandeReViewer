@@ -4,7 +4,16 @@
         <item name="colorPrimary">@color/purple_500</item>
         <item name="colorPrimaryContainer">@color/purple_700</item>
         <item name="colorOnPrimary">@color/white</item>
+        <item name="android:statusBarColor">?attr/colorPrimary</item>
+        <item name="android:windowLightStatusBar">false</item>
     </style>
 
+    <style name="ThemeOverlay.YandeReViewer.Toolbar">
+        <item name="android:textColorPrimary">?attr/colorOnPrimary</item>
+        <item name="android:textColorSecondary">?attr/colorOnPrimary</item>
+        <item name="colorControlNormal">?attr/colorOnPrimary</item>
+        <item name="actionMenuTextColor">?attr/colorOnPrimary</item>
+    </style>
+    <style name="ThemeOverlay.YandeReViewer" parent="ThemeOverlay.Material3"/>
     <style name="Theme.YandeReViewer.PopupOverlay" parent="ThemeOverlay.AppCompat.Light" />
 </resources>

@@ -7,6 +7,7 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:clipChildren="false"
+    android:fitsSystemWindows="true"
     tools:context=".DetailActivity">
 
     <!-- 分隔线1：图片区 与 标签区 的边界 -->

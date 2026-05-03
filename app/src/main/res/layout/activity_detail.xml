@@ -7,6 +7,7 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:clipChildren="false"
+    android:fitsSystemWindows="true"
     tools:context=".DetailActivity">
 
     <!-- ======= 内容区（上 + 中）：支持滑动 ======= -->
