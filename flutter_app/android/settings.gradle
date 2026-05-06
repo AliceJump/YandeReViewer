@@ -1,0 +1,10 @@
+allprojects {
+    repositories {
+        google()
+        mavenCentral()
+    }
+}
+
+rootProject.name = "yande_viewer"
+
+include ':app'

@@ -2,6 +2,8 @@
 
 [中文](#中文) | [English](README_en.md)
 
+> 🚀 **Flutter 版本**: Flutter 版本代码位于 [`flutter_app/`](flutter_app/) 目录，查看 [Flutter 版 README](flutter_app/README.md)。
+
 ---
 
 <a name="中文"></a>
