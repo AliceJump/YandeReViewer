@@ -341,7 +341,8 @@ class DetailActivity : AppCompatActivity() {
             finish()
             return
         }
-        val safeInitialPosition = position.coerceIn(0, posts.lastIndex)
+        val maxValidPosition = (posts.size - 1).coerceAtLeast(0)
+        val safeInitialPosition = position.coerceIn(0, maxValidPosition)
 
         // ====== 初始化 ViewPager ======
         imagePagerAdapter = ImagePagerAdapter(posts)
