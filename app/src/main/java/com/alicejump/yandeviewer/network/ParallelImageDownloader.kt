@@ -19,6 +19,9 @@ class ParallelImageFetcher(private val client: OkHttpClient, private val url: St
 
     private companion object {
         const val PARALLEL_DOWNLOAD_MIN_BYTES = 1_500_000L
+        const val MEDIUM_FILE_CHUNK_MULTIPLIER = 3
+        const val MEDIUM_FILE_CHUNK_COUNT = 2
+        const val LARGE_FILE_CHUNK_COUNT = 4
     }
 
     override suspend fun fetch(): FetchResult? = withContext(Dispatchers.IO) {
@@ -76,7 +79,11 @@ class ParallelImageFetcher(private val client: OkHttpClient, private val url: St
 
     private fun resolveChunkCount(contentLength: Long?): Int {
         if (contentLength == null || contentLength < PARALLEL_DOWNLOAD_MIN_BYTES) return 1
-        return if (contentLength < PARALLEL_DOWNLOAD_MIN_BYTES * 3) 2 else 4
+        return if (contentLength < PARALLEL_DOWNLOAD_MIN_BYTES * MEDIUM_FILE_CHUNK_MULTIPLIER) {
+            MEDIUM_FILE_CHUNK_COUNT
+        } else {
+            LARGE_FILE_CHUNK_COUNT
+        }
     }
 
     class Factory : Fetcher.Factory<String> {

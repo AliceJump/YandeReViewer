@@ -27,7 +27,7 @@ class PostPagingSource(
 
             LoadResult.Page(
                 data = posts,
-                prevKey = if (page == 1) null else page - 1,
+                prevKey = if (requestPage == 1) null else requestPage - 1,
                 nextKey = if (posts.isEmpty()) null else requestPage + 1
             )
         } catch (e: Exception) {
