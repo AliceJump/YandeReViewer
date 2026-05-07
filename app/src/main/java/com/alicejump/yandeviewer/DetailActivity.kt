@@ -324,11 +324,10 @@ class DetailActivity : AppCompatActivity() {
 
         // 获取 Intent 数据
         postsTransferKey = intent.getStringExtra(PostTransferStore.EXTRA_POSTS_TRANSFER_KEY)
-        val selectedPostId =
-            intent.getLongExtra(PostTransferStore.EXTRA_SELECTED_POST_ID, INVALID_POST_ID)
-                .takeIf { it != INVALID_POST_ID }
+        val rawSelectedPostId = intent.getLongExtra(PostTransferStore.EXTRA_SELECTED_POST_ID, INVALID_POST_ID)
+        val selectedPostId = rawSelectedPostId.takeIf { it != INVALID_POST_ID }
         val postsFromTransferStore = PostTransferStore.get(postsTransferKey)
-        val isTransferStoreMiss = !postsTransferKey.isNullOrBlank() && postsFromTransferStore == null
+        val isUnexpectedTransferStoreMiss = !postsTransferKey.isNullOrBlank() && postsFromTransferStore == null
         val postsFromLegacyParcelable = if (postsFromTransferStore == null) {
             readLegacyPostsWithGuard()
         } else {
@@ -352,7 +351,7 @@ class DetailActivity : AppCompatActivity() {
         ratingEState = intent.getBooleanExtra(MainActivity.EXTRA_RATING_E, false)
 
         if (posts == null) {
-            if (isTransferStoreMiss) {
+            if (isUnexpectedTransferStoreMiss) {
                 Log.w(
                     TAG,
                     "PostTransferStore miss and recovery failed (key=$postsTransferKey, selectedPostId=$selectedPostId)"
