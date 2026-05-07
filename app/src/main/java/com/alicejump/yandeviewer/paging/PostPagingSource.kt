@@ -8,16 +8,27 @@ import com.alicejump.yandeviewer.network.RetrofitClient
 class PostPagingSource(
     private val tags: String
 ) : PagingSource<Int, Post>() {
+    private companion object {
+        const val MAX_EMPTY_PAGE_PROBES = 3
+    }
 
     override suspend fun load(params: LoadParams<Int>): LoadResult<Int, Post> {
         val page = params.key ?: 1
         return try {
-            val posts = RetrofitClient.api.getPosts(tags = tags, page = page)
+            var requestPage = page
+            var posts = RetrofitClient.api.getPosts(tags = tags, page = requestPage)
+            var emptyProbeCount = 0
+
+            while (posts.isEmpty() && emptyProbeCount < MAX_EMPTY_PAGE_PROBES) {
+                emptyProbeCount++
+                requestPage++
+                posts = RetrofitClient.api.getPosts(tags = tags, page = requestPage)
+            }
 
             LoadResult.Page(
                 data = posts,
                 prevKey = if (page == 1) null else page - 1,
-                nextKey = if (posts.isEmpty()) null else page + 1
+                nextKey = if (posts.isEmpty()) null else requestPage + 1
             )
         } catch (e: Exception) {
             LoadResult.Error(e)
