@@ -61,6 +61,7 @@ class DetailActivity : AppCompatActivity() {
         const val TAG = "DetailActivity"
         const val FAB_DRAWER_DISTANCE = 300f
         const val FAB_ANIMATION_DURATION = 300L
+        const val INVALID_POST_ID = Long.MIN_VALUE
         const val LEGACY_POSTS_WARN_COUNT = 20
         const val LEGACY_POSTS_WARN_BYTES = 128 * 1024
         const val LEGACY_POSTS_REJECT_BYTES = 256 * 1024
@@ -324,7 +325,8 @@ class DetailActivity : AppCompatActivity() {
         // 获取 Intent 数据
         postsTransferKey = intent.getStringExtra(PostTransferStore.EXTRA_POSTS_TRANSFER_KEY)
         val selectedPostId =
-            intent.getLongExtra(PostTransferStore.EXTRA_SELECTED_POST_ID, -1L).takeIf { it > 0L }
+            intent.getLongExtra(PostTransferStore.EXTRA_SELECTED_POST_ID, INVALID_POST_ID)
+                .takeIf { it != INVALID_POST_ID }
         val postsFromTransferStore = PostTransferStore.get(postsTransferKey)
         val isTransferStoreMiss = !postsTransferKey.isNullOrBlank() && postsFromTransferStore == null
         val postsFromLegacyParcelable = if (postsFromTransferStore == null) {
