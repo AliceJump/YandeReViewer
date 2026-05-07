@@ -5,6 +5,7 @@ import java.util.UUID
 
 object PostTransferStore {
     const val EXTRA_POSTS_TRANSFER_KEY = "posts_transfer_key"
+    const val EXTRA_SELECTED_POST_ID = "selected_post_id"
     private const val MAX_ENTRIES = 8
 
     private val cache = LinkedHashMap<String, List<Post>>(MAX_ENTRIES, 0.75f, true)

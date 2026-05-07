@@ -171,6 +171,22 @@ cd YandeReViewer
 
 ---
 
+## 🧪 内存诊断建议（图片解码/图形缓存）
+
+在图片密集滑动或详情页频繁切换场景下，建议定期采集：
+
+```bash
+adb shell dumpsys meminfo com.alicejump.yandeviewer
+```
+
+重点关注以下区块趋势是否持续升高：
+- `Graphics`
+- `EGL mtrack`
+- `Ashmem`
+- `Native Heap`
+
+---
+
 ## ⚖️ 免责声明与版权声明
 
 - 本应用为 **第三方客户端**,与 yande.re **无关联**

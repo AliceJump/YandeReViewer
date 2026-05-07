@@ -166,6 +166,22 @@ cd YandeReViewer
 
 ---
 
+## 🧪 Memory Diagnostics (image decode / graphics cache)
+
+During image-heavy scrolling and frequent detail-page transitions, regularly collect:
+
+```bash
+adb shell dumpsys meminfo com.alicejump.yandeviewer
+```
+
+Watch the trend of these sections:
+- `Graphics`
+- `EGL mtrack`
+- `Ashmem`
+- `Native Heap`
+
+---
+
 ## ⚖️ Disclaimer & Copyright Notice
 
 - This application is a **third-party client** and is **not affiliated with yande.re**

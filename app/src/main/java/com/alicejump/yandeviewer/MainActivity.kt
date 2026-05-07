@@ -329,6 +329,7 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
                 val intent = Intent(this, DetailActivity::class.java).apply {
                     val posts = postAdapter.snapshot().items
                     putExtra(PostTransferStore.EXTRA_POSTS_TRANSFER_KEY, PostTransferStore.put(posts))
+                    putExtra(PostTransferStore.EXTRA_SELECTED_POST_ID, post.id)
                     putExtra("position", position)
                     putExtra("first_visible_position", firstVisible)
                     putExtra("last_visible_position", lastVisible)

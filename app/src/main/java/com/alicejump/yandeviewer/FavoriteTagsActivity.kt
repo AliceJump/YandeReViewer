@@ -64,6 +64,7 @@ class FavoriteTagsActivity : AppCompatActivity() {
             onPostClick = { post, posts ->
                 startActivity(Intent(this, DetailActivity::class.java).apply {
                     putExtra(PostTransferStore.EXTRA_POSTS_TRANSFER_KEY, PostTransferStore.put(posts))
+                    putExtra(PostTransferStore.EXTRA_SELECTED_POST_ID, post.id)
                     putExtra("position", posts.indexOf(post))
                 })
             }

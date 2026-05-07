@@ -52,6 +52,7 @@ class BrowsingHistoryActivity : AppCompatActivity() {
                 val posts = BrowsingHistoryManager.getAll(this)
                 val intent = Intent(this, DetailActivity::class.java).apply {
                     putExtra(PostTransferStore.EXTRA_POSTS_TRANSFER_KEY, PostTransferStore.put(posts))
+                    putExtra(PostTransferStore.EXTRA_SELECTED_POST_ID, post.id)
                     putExtra("position", position)
                     putExtra("grid_span_count", 2)
                 }

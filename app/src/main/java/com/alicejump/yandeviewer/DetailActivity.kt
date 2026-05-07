@@ -9,6 +9,8 @@ import android.content.res.Configuration
 import android.graphics.Canvas
 import android.graphics.Color
 import android.os.Bundle
+import android.os.Parcel
+import android.util.Log
 import android.util.Patterns
 import android.view.MenuItem
 import android.view.View
@@ -56,8 +58,12 @@ class DetailActivity : AppCompatActivity() {
     private var currentSource: String? = null
 
     private companion object {
+        const val TAG = "DetailActivity"
         const val FAB_DRAWER_DISTANCE = 300f
         const val FAB_ANIMATION_DURATION = 300L
+        const val LEGACY_POSTS_WARN_COUNT = 20
+        const val LEGACY_POSTS_WARN_BYTES = 128 * 1024
+        const val LEGACY_POSTS_REJECT_BYTES = 256 * 1024
     }
 
 
@@ -317,13 +323,21 @@ class DetailActivity : AppCompatActivity() {
 
         // 获取 Intent 数据
         postsTransferKey = intent.getStringExtra(PostTransferStore.EXTRA_POSTS_TRANSFER_KEY)
-        val posts = PostTransferStore.get(postsTransferKey)
-            ?: if (android.os.Build.VERSION.SDK_INT >= 33) {
-                intent.getParcelableArrayListExtra("posts", Post::class.java)
-            } else {
-                @Suppress("DEPRECATION")
-                intent.getParcelableArrayListExtra("posts")
-            }
+        val selectedPostId =
+            intent.getLongExtra(PostTransferStore.EXTRA_SELECTED_POST_ID, -1L).takeIf { it > 0L }
+        val postsFromTransferStore = PostTransferStore.get(postsTransferKey)
+        val isTransferStoreMiss = !postsTransferKey.isNullOrBlank() && postsFromTransferStore == null
+        val postsFromLegacyParcelable = if (postsFromTransferStore == null) {
+            readLegacyPostsWithGuard()
+        } else {
+            null
+        }
+        val recoveredPosts = if (postsFromTransferStore == null && postsFromLegacyParcelable == null && isTransferStoreMiss) {
+            recoverPostsAfterStoreMiss(selectedPostId)
+        } else {
+            null
+        }
+        val posts = postsFromTransferStore ?: postsFromLegacyParcelable ?: recoveredPosts
         val position = intent.getIntExtra("position", 0)
         firstVisiblePosition = intent.getIntExtra("first_visible_position", -1)
         lastVisiblePosition = intent.getIntExtra("last_visible_position", -1)
@@ -336,6 +350,12 @@ class DetailActivity : AppCompatActivity() {
         ratingEState = intent.getBooleanExtra(MainActivity.EXTRA_RATING_E, false)
 
         if (posts == null) {
+            if (isTransferStoreMiss) {
+                Log.w(
+                    TAG,
+                    "PostTransferStore miss and recovery failed (key=$postsTransferKey, selectedPostId=$selectedPostId)"
+                )
+            }
             Toast.makeText(this, R.string.detail_posts_not_found, Toast.LENGTH_SHORT).show()
             finish()
             return
@@ -450,6 +470,54 @@ class DetailActivity : AppCompatActivity() {
             PostTransferStore.remove(postsTransferKey)
         }
         super.onDestroy()
+    }
+
+    private fun readLegacyPostsWithGuard(): List<Post>? {
+        val legacyPosts = if (android.os.Build.VERSION.SDK_INT >= 33) {
+            intent.getParcelableArrayListExtra("posts", Post::class.java)
+        } else {
+            @Suppress("DEPRECATION")
+            intent.getParcelableArrayListExtra("posts")
+        } ?: return null
+
+        val estimatedParcelSize = estimateParcelSizeBytes(legacyPosts)
+        if (legacyPosts.size > LEGACY_POSTS_WARN_COUNT || estimatedParcelSize > LEGACY_POSTS_WARN_BYTES) {
+            Log.w(
+                TAG,
+                "Legacy Parcelable fallback payload detected (size=${legacyPosts.size}, bytes=$estimatedParcelSize)"
+            )
+        }
+        if (estimatedParcelSize > LEGACY_POSTS_REJECT_BYTES) {
+            Log.e(
+                TAG,
+                "Rejecting legacy Parcelable fallback due to large payload (size=${legacyPosts.size}, bytes=$estimatedParcelSize)"
+            )
+            return null
+        }
+        return legacyPosts
+    }
+
+    private fun estimateParcelSizeBytes(posts: List<Post>): Int {
+        val parcel = Parcel.obtain()
+        return try {
+            parcel.writeTypedList(posts)
+            parcel.dataSize()
+        } finally {
+            parcel.recycle()
+        }
+    }
+
+    private fun recoverPostsAfterStoreMiss(selectedPostId: Long?): List<Post>? {
+        if (selectedPostId == null) return null
+        FavoritesManager.getAll(this).firstOrNull { it.id == selectedPostId }?.let {
+            Log.i(TAG, "Recovered post from favorites after PostTransferStore miss (postId=$selectedPostId)")
+            return listOf(it)
+        }
+        BrowsingHistoryManager.getAll(this).firstOrNull { it.id == selectedPostId }?.let {
+            Log.i(TAG, "Recovered post from browsing history after PostTransferStore miss (postId=$selectedPostId)")
+            return listOf(it)
+        }
+        return null
     }
 
     private fun convertPixivImageUrlToArtwork(url: String): String? {

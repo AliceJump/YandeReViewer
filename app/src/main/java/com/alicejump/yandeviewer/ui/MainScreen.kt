@@ -212,6 +212,7 @@ fun MainScreen(
                                     val intent = Intent(context, DetailActivity::class.java).apply {
                                         val postList = posts.itemSnapshotList.items
                                         putExtra(PostTransferStore.EXTRA_POSTS_TRANSFER_KEY, PostTransferStore.put(postList))
+                                        putExtra(PostTransferStore.EXTRA_SELECTED_POST_ID, post.id)
                                         putExtra("position", index)
                                     }
                                     context.startActivity(intent)
