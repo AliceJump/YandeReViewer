@@ -59,6 +59,7 @@ import androidx.paging.compose.itemKey
 import coil.compose.AsyncImage
 import com.alicejump.yandeviewer.DetailActivity
 import com.alicejump.yandeviewer.R
+import com.alicejump.yandeviewer.data.PostTransferStore
 import com.alicejump.yandeviewer.model.Post
 import com.alicejump.yandeviewer.viewmodel.TagTypeCache
 
@@ -210,7 +211,7 @@ fun MainScreen(
                                 PostItem(post) {
                                     val intent = Intent(context, DetailActivity::class.java).apply {
                                         val postList = posts.itemSnapshotList.items
-                                        putParcelableArrayListExtra("posts", ArrayList(postList))
+                                        putExtra(PostTransferStore.EXTRA_POSTS_TRANSFER_KEY, PostTransferStore.put(postList))
                                         putExtra("position", index)
                                     }
                                     context.startActivity(intent)

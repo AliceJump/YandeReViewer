@@ -31,6 +31,7 @@ import com.alicejump.yandeviewer.data.BlacklistManager
 import com.alicejump.yandeviewer.data.BrowsingHistoryManager
 import com.alicejump.yandeviewer.data.FavoritesManager
 import com.alicejump.yandeviewer.data.FavoriteTagsManager
+import com.alicejump.yandeviewer.data.PostTransferStore
 import com.alicejump.yandeviewer.model.Post
 import com.alicejump.yandeviewer.viewmodel.TagTypeCache
 import com.google.android.material.chip.Chip
@@ -314,12 +315,13 @@ class DetailActivity : AppCompatActivity() {
 
 
         // 获取 Intent 数据
-        val posts = if (android.os.Build.VERSION.SDK_INT >= 33) {
-            intent.getParcelableArrayListExtra("posts", Post::class.java)
-        } else {
-            @Suppress("DEPRECATION")
-            intent.getParcelableArrayListExtra("posts")
-        }
+        val posts = PostTransferStore.get(intent.getStringExtra(PostTransferStore.EXTRA_POSTS_TRANSFER_KEY))
+            ?: if (android.os.Build.VERSION.SDK_INT >= 33) {
+                intent.getParcelableArrayListExtra("posts", Post::class.java)
+            } else {
+                @Suppress("DEPRECATION")
+                intent.getParcelableArrayListExtra("posts")
+            }
         val position = intent.getIntExtra("position", 0)
         firstVisiblePosition = intent.getIntExtra("first_visible_position", -1)
         lastVisiblePosition = intent.getIntExtra("last_visible_position", -1)

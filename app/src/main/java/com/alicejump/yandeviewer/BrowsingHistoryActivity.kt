@@ -12,6 +12,7 @@ import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.alicejump.yandeviewer.adapter.PostAdapter
 import com.alicejump.yandeviewer.data.BrowsingHistoryManager
+import com.alicejump.yandeviewer.data.PostTransferStore
 import androidx.paging.PagingData
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.lifecycle.lifecycleScope
@@ -50,7 +51,7 @@ class BrowsingHistoryActivity : AppCompatActivity() {
             onPostClick = { post, position, imageView ->
                 val posts = BrowsingHistoryManager.getAll(this)
                 val intent = Intent(this, DetailActivity::class.java).apply {
-                    putParcelableArrayListExtra("posts", ArrayList(posts))
+                    putExtra(PostTransferStore.EXTRA_POSTS_TRANSFER_KEY, PostTransferStore.put(posts))
                     putExtra("position", position)
                     putExtra("grid_span_count", 2)
                 }
