@@ -21,8 +21,15 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
+  static const _labelBrowseMode = '浏览模式';
+  static const _labelFavoriteMode = '收藏模式';
+  static const _labelFavoriteTags = '收藏标签';
+  static const _labelBlacklist = '黑名单';
+
   final ScrollController _scrollController = ScrollController();
   final TextEditingController _searchController = TextEditingController();
+  late PostProvider _postProvider;
+  bool _didInit = false;
 
   List<TagInfo> _suggestions = [];
   bool _showSuggestions = false;
@@ -32,10 +39,20 @@ class _HomeScreenState extends State<HomeScreen> {
   void initState() {
     super.initState();
     _scrollController.addListener(_onScroll);
-    // Initial load
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      context.read<PostProvider>().refresh();
-    });
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _postProvider = context.read<PostProvider>();
+    if (!_didInit) {
+      _didInit = true;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          _postProvider.refresh();
+        }
+      });
+    }
   }
 
   @override
@@ -47,10 +64,9 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   void _onScroll() {
-    final provider = context.read<PostProvider>();
     if (_scrollController.position.pixels >=
         _scrollController.position.maxScrollExtent - 400) {
-      provider.loadMore();
+      _postProvider.loadMore();
     }
   }
 
@@ -151,7 +167,9 @@ class _HomeScreenState extends State<HomeScreen> {
                     : Icons.favorite,
               ),
               title: Text(
-                provider.mode == BrowseMode.normal ? '浏览模式' : '收藏模式',
+                provider.mode == BrowseMode.normal
+                    ? _labelBrowseMode
+                    : _labelFavoriteMode,
               ),
               trailing: Switch(
                 value: provider.mode == BrowseMode.favorites,
@@ -169,7 +187,7 @@ class _HomeScreenState extends State<HomeScreen> {
             // Navigation items
             ListTile(
               leading: const Icon(Icons.label_outline),
-              title: const Text('收藏标签'),
+              title: const Text(_labelFavoriteTags),
               onTap: () {
                 Navigator.pop(context);
                 Navigator.push(
@@ -182,7 +200,7 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
             ListTile(
               leading: const Icon(Icons.block),
-              title: const Text('黑名单'),
+              title: const Text(_labelBlacklist),
               onTap: () {
                 Navigator.pop(context);
                 Navigator.push(
@@ -202,7 +220,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   vertical: 4,
                 ),
                 child: Text(
-                  '收藏标签',
+                  _labelFavoriteTags,
                   style: Theme.of(context).textTheme.labelMedium,
                 ),
               ),

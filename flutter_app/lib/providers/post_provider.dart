@@ -45,12 +45,31 @@ class PostProvider extends ChangeNotifier {
   }
 
   void toggleRating(String rating) {
+    var changed = false;
     if (_ratings.contains(rating)) {
       if (_ratings.length == 1) return; // keep at least one
       _ratings.remove(rating);
+      changed = true;
     } else {
       _ratings.add(rating);
+      changed = true;
     }
+    if (!changed) return;
+
+    if (_mode == BrowseMode.favorites) {
+      final tags = _query.split(' ').where((t) => t.isNotEmpty).toList();
+      _posts
+        ..clear()
+        ..addAll(favoritesProvider.filter(tags, _ratings));
+      _page = 1;
+      _hasMore = false;
+      _error = null;
+      notifyListeners();
+      return;
+    }
+
+    // Give immediate feedback before reloading first page.
+    notifyListeners();
     refresh();
   }
 
