@@ -13,6 +13,7 @@ object PostTransferStore {
     fun put(posts: List<Post>): String {
         val key = UUID.randomUUID().toString()
         synchronized(lock) {
+            // Defensive copy to avoid later mutation of mutable list implementations.
             cache[key] = posts.toList()
             trimToMaxSize()
         }
@@ -22,6 +23,11 @@ object PostTransferStore {
     fun get(key: String?): List<Post>? {
         if (key.isNullOrBlank()) return null
         return synchronized(lock) { cache[key] }
+    }
+
+    fun remove(key: String?) {
+        if (key.isNullOrBlank()) return
+        synchronized(lock) { cache.remove(key) }
     }
 
     private fun trimToMaxSize() {

@@ -85,6 +85,7 @@ class DetailActivity : AppCompatActivity() {
     private var ratingQState: Boolean = false
     private var ratingEState: Boolean = false
     private var gridSpanCount: Int = 2
+    private var postsTransferKey: String? = null
 
     // ====== 共享元素动画辅助函数 ======
 
@@ -315,7 +316,8 @@ class DetailActivity : AppCompatActivity() {
 
 
         // 获取 Intent 数据
-        val posts = PostTransferStore.get(intent.getStringExtra(PostTransferStore.EXTRA_POSTS_TRANSFER_KEY))
+        postsTransferKey = intent.getStringExtra(PostTransferStore.EXTRA_POSTS_TRANSFER_KEY)
+        val posts = PostTransferStore.get(postsTransferKey)
             ?: if (android.os.Build.VERSION.SDK_INT >= 33) {
                 intent.getParcelableArrayListExtra("posts", Post::class.java)
             } else {
@@ -441,6 +443,13 @@ class DetailActivity : AppCompatActivity() {
             }
         }
         return super.onOptionsItemSelected(item)
+    }
+
+    override fun onDestroy() {
+        if (!isChangingConfigurations) {
+            PostTransferStore.remove(postsTransferKey)
+        }
+        super.onDestroy()
     }
 
     private fun convertPixivImageUrlToArtwork(url: String): String? {
