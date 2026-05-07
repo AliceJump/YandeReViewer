@@ -7,6 +7,7 @@ object RetrofitClient {
     val api: YandeApi by lazy {
         Retrofit.Builder()
             .baseUrl("https://yande.re/")
+            .client(NetworkClient.client)
             .addConverterFactory(GsonConverterFactory.create())
             .build()
             .create(YandeApi::class.java)
