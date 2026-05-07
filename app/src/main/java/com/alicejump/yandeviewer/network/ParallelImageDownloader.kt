@@ -1,6 +1,7 @@
 package com.alicejump.yandeviewer.network
 
 import android.content.Context
+import android.util.Log
 import coil.ImageLoader
 import coil.decode.DataSource
 import coil.decode.ImageSource
@@ -18,6 +19,7 @@ import okio.Buffer
 class ParallelImageFetcher(private val client: OkHttpClient, private val url: String, private val context: Context) : Fetcher {
 
     private companion object {
+        const val TAG = "ParallelImageFetcher"
         const val PARALLEL_DOWNLOAD_MIN_BYTES = 1_500_000L
         const val MEDIUM_FILE_CHUNK_MULTIPLIER = 3
         const val MEDIUM_FILE_CHUNK_COUNT = 2
@@ -72,7 +74,8 @@ class ParallelImageFetcher(private val client: OkHttpClient, private val url: St
                     return@withContext SourceResult(source = ImageSource(buffer, context), mimeType = null, dataSource = DataSource.NETWORK)
                 }
             }
-        } catch (_: Exception) {
+        } catch (e: Exception) {
+            Log.w(TAG, "Image fetch failed for $url", e)
         }
         return@withContext null
     }
