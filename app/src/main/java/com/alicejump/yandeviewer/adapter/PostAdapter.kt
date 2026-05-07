@@ -5,6 +5,7 @@ import android.view.ViewGroup
 import android.widget.ImageView
 import androidx.paging.PagingDataAdapter
 import androidx.recyclerview.widget.DiffUtil
+import androidx.recyclerview.widget.RecyclerView
 import com.alicejump.yandeviewer.R
 import com.alicejump.yandeviewer.model.Post
 
@@ -67,15 +68,22 @@ class PostAdapter(
         holder.bind(post, isSelectionMode, selectedItems.contains(post))
 
         holder.itemView.setOnClickListener {
+            val currentPosition = holder.bindingAdapterPosition
+            if (currentPosition == RecyclerView.NO_POSITION) return@setOnClickListener
+            val currentPost = getItem(currentPosition) ?: return@setOnClickListener
+
             if (isSelectionMode) {
-                toggleSelection(post, position)
+                toggleSelection(currentPost, currentPosition)
             } else {
-                onPostClick(post, position, holder.getImageView())
+                onPostClick(currentPost, currentPosition, holder.getImageView())
             }
         }
 
         holder.itemView.setOnLongClickListener {
-            enterSelectionMode(post, position)
+            val currentPosition = holder.bindingAdapterPosition
+            if (currentPosition == RecyclerView.NO_POSITION) return@setOnLongClickListener false
+            val currentPost = getItem(currentPosition) ?: return@setOnLongClickListener false
+            enterSelectionMode(currentPost, currentPosition)
             true
         }
     }

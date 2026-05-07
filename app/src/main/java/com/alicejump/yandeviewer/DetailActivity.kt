@@ -336,6 +336,13 @@ class DetailActivity : AppCompatActivity() {
             finish()
             return
         }
+        if (posts.isEmpty()) {
+            Toast.makeText(this, R.string.detail_posts_not_found, Toast.LENGTH_SHORT).show()
+            finish()
+            return
+        }
+        val maxValidPosition = posts.size - 1
+        val safeInitialPosition = position.coerceIn(0, maxValidPosition)
 
         // ====== 初始化 ViewPager ======
         imagePagerAdapter = ImagePagerAdapter(posts)
@@ -349,7 +356,7 @@ class DetailActivity : AppCompatActivity() {
 
         // ====== 收藏按钮逻辑 ======
         favoriteFab.setOnClickListener {
-            val currentPost = posts[viewPager.currentItem]
+            val currentPost = posts.getOrNull(viewPager.currentItem) ?: return@setOnClickListener
 
             if (FavoritesManager.isFavorite(this, currentPost.id)) {
                 // 已收藏 -> 取消收藏
@@ -364,7 +371,7 @@ class DetailActivity : AppCompatActivity() {
             updateFavoriteButton(currentPost)
         }
         internalFab.setOnClickListener {
-            val post = posts[viewPager.currentItem] // 或者 posts[viewPager.currentItem]
+            val post = posts.getOrNull(viewPager.currentItem) ?: return@setOnClickListener
             val postId = post.id
             val url = "https://yande.re/post/show/$postId"
 
@@ -388,8 +395,8 @@ class DetailActivity : AppCompatActivity() {
         })
 
         // 设置初始显示页面
-        viewPager.setCurrentItem(position, false)
-        updateUiForPosition(position, posts)
+        viewPager.setCurrentItem(safeInitialPosition, false)
+        updateUiForPosition(safeInitialPosition, posts)
 
         // 启动共享元素过渡
         viewPager.post { startPostponedEnterTransition() }
@@ -406,6 +413,7 @@ class DetailActivity : AppCompatActivity() {
 
     // 根据当前页面更新 UI：标签、来源、收藏状态
     private fun updateUiForPosition(position: Int, posts: List<Post>) {
+        if (position !in posts.indices) return
         val currentPost = posts[position]
         val tagsToFetch = currentPost.tags.split(" ").toSet()
 
