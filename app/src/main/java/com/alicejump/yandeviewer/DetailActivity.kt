@@ -341,7 +341,7 @@ class DetailActivity : AppCompatActivity() {
             finish()
             return
         }
-        val maxValidPosition = (posts.size - 1).coerceAtLeast(0)
+        val maxValidPosition = posts.size - 1
         val safeInitialPosition = position.coerceIn(0, maxValidPosition)
 
         // ====== 初始化 ViewPager ======
