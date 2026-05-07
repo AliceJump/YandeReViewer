@@ -332,7 +332,7 @@ class DetailActivity : AppCompatActivity() {
         } else {
             null
         }
-        val recoveredPosts = if (postsFromTransferStore == null && postsFromLegacyParcelable == null && isTransferStoreMiss) {
+        val recoveredPosts = if (postsFromTransferStore == null && postsFromLegacyParcelable == null) {
             recoverPostsAfterStoreMiss(selectedPostId)
         } else {
             null
@@ -480,19 +480,25 @@ class DetailActivity : AppCompatActivity() {
             intent.getParcelableArrayListExtra("posts")
         } ?: return null
 
-        val estimatedParcelSize = estimateParcelSizeBytes(legacyPosts)
-        if (legacyPosts.size > LEGACY_POSTS_WARN_COUNT || estimatedParcelSize > LEGACY_POSTS_WARN_BYTES) {
+        if (legacyPosts.size > LEGACY_POSTS_WARN_COUNT) {
+            val estimatedParcelSize = estimateParcelSizeBytes(legacyPosts)
             Log.w(
                 TAG,
                 "Legacy Parcelable fallback payload detected (size=${legacyPosts.size}, bytes=$estimatedParcelSize)"
             )
-        }
-        if (estimatedParcelSize > LEGACY_POSTS_REJECT_BYTES) {
-            Log.e(
-                TAG,
-                "Rejecting legacy Parcelable fallback due to large payload (size=${legacyPosts.size}, bytes=$estimatedParcelSize)"
-            )
-            return null
+            if (estimatedParcelSize > LEGACY_POSTS_WARN_BYTES) {
+                Log.w(
+                    TAG,
+                    "Legacy Parcelable fallback estimated parcel size is high (bytes=$estimatedParcelSize)"
+                )
+            }
+            if (estimatedParcelSize > LEGACY_POSTS_REJECT_BYTES) {
+                Log.e(
+                    TAG,
+                    "Rejecting legacy Parcelable fallback due to large payload (size=${legacyPosts.size}, bytes=$estimatedParcelSize)"
+                )
+                return null
+            }
         }
         return legacyPosts
     }
