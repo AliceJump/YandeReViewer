@@ -32,8 +32,10 @@ object PostTransferStore {
 
     private fun trimToMaxSize() {
         while (cache.size > MAX_ENTRIES) {
-            val oldestKey = cache.entries.firstOrNull()?.key ?: break
-            cache.remove(oldestKey)
+            val iterator = cache.entries.iterator()
+            if (!iterator.hasNext()) break
+            iterator.next()
+            iterator.remove()
         }
     }
 }
