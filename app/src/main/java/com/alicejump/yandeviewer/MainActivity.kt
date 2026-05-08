@@ -47,6 +47,7 @@ import com.alicejump.yandeviewer.adapter.PostAdapter
 import com.alicejump.yandeviewer.data.BlacklistManager
 import com.alicejump.yandeviewer.data.FavoritesManager
 import com.alicejump.yandeviewer.data.BrowsingHistoryManager
+import com.alicejump.yandeviewer.data.DetailPostCache
 import com.alicejump.yandeviewer.model.Post
 import com.alicejump.yandeviewer.network.GitHubApiClient
 import com.alicejump.yandeviewer.network.GitHubRelease
@@ -327,7 +328,8 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
 
                 val intent = Intent(this, DetailActivity::class.java).apply {
                     val posts = postAdapter.snapshot().items
-                    putParcelableArrayListExtra("posts", ArrayList(posts))
+                    putExtra(DetailActivity.EXTRA_POSTS_CACHE_KEY, DetailPostCache.put(posts))
+                    putExtra(DetailActivity.EXTRA_POST_ID, post.id)
                     putExtra("position", position)
                     putExtra("first_visible_position", firstVisible)
                     putExtra("last_visible_position", lastVisible)

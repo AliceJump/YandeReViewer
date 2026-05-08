@@ -29,6 +29,7 @@ import androidx.viewpager2.widget.ViewPager2
 import com.alicejump.yandeviewer.adapter.ImagePagerAdapter
 import com.alicejump.yandeviewer.data.BlacklistManager
 import com.alicejump.yandeviewer.data.BrowsingHistoryManager
+import com.alicejump.yandeviewer.data.DetailPostCache
 import com.alicejump.yandeviewer.data.FavoritesManager
 import com.alicejump.yandeviewer.data.FavoriteTagsManager
 import com.alicejump.yandeviewer.model.Post
@@ -54,9 +55,11 @@ class DetailActivity : AppCompatActivity() {
     private var isExpanded = false
     private var currentSource: String? = null
 
-    private companion object {
+    companion object {
         const val FAB_DRAWER_DISTANCE = 300f
         const val FAB_ANIMATION_DURATION = 300L
+        const val EXTRA_POSTS_CACHE_KEY = "posts_cache_key"
+        const val EXTRA_POST_ID = "post_id"
     }
 
 
@@ -314,13 +317,9 @@ class DetailActivity : AppCompatActivity() {
 
 
         // 获取 Intent 数据
-        val posts = if (android.os.Build.VERSION.SDK_INT >= 33) {
-            intent.getParcelableArrayListExtra("posts", Post::class.java)
-        } else {
-            @Suppress("DEPRECATION")
-            intent.getParcelableArrayListExtra("posts")
-        }
+        val posts = DetailPostCache.get(intent.getStringExtra(EXTRA_POSTS_CACHE_KEY))
         val position = intent.getIntExtra("position", 0)
+        val postId = intent.getLongExtra(EXTRA_POST_ID, -1L)
         firstVisiblePosition = intent.getIntExtra("first_visible_position", -1)
         lastVisiblePosition = intent.getIntExtra("last_visible_position", -1)
         gridSpanCount = intent.getIntExtra("grid_span_count", 2).coerceAtLeast(1)
@@ -342,7 +341,9 @@ class DetailActivity : AppCompatActivity() {
             return
         }
         val maxValidPosition = posts.size - 1
-        val safeInitialPosition = position.coerceIn(0, maxValidPosition)
+        val positionById = if (postId >= 0L) posts.indexOfFirst { it.id == postId } else -1
+        val initialPosition = if (positionById >= 0) positionById else position
+        val safeInitialPosition = initialPosition.coerceIn(0, maxValidPosition)
 
         // ====== 初始化 ViewPager ======
         imagePagerAdapter = ImagePagerAdapter(posts)
