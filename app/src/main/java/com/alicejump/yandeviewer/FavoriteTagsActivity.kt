@@ -12,6 +12,7 @@ import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.RecyclerView
 import com.alicejump.yandeviewer.adapter.FavoriteTagAdapter
 import com.alicejump.yandeviewer.adapter.FavoriteTagItem
+import com.alicejump.yandeviewer.data.DetailPostCache
 import com.alicejump.yandeviewer.data.FavoriteTagsManager
 import com.alicejump.yandeviewer.network.RetrofitClient
 import com.alicejump.yandeviewer.viewmodel.ArtistCache
@@ -62,7 +63,8 @@ class FavoriteTagsActivity : AppCompatActivity() {
             onTagLongClick = { _, tag -> showTagContextMenu(tag) },
             onPostClick = { post, posts ->
                 startActivity(Intent(this, DetailActivity::class.java).apply {
-                    putParcelableArrayListExtra("posts", ArrayList(posts))
+                    putExtra(DetailActivity.EXTRA_POSTS_CACHE_KEY, DetailPostCache.put(posts))
+                    putExtra(DetailActivity.EXTRA_POST_ID, post.id)
                     putExtra("position", posts.indexOf(post))
                 })
             }
