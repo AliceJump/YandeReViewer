@@ -345,6 +345,9 @@ class DetailActivity : AppCompatActivity() {
         }
         val maxValidPosition = posts.size - 1
         val positionById = if (postId >= 0L) posts.indexOfFirst { it.id == postId } else -1
+        if (postId >= 0L && positionById < 0) {
+            Log.w(logTag, "Post id not found in cache list. postId=$postId, fallbackPosition=$position")
+        }
         val initialPosition = if (positionById >= 0) positionById else position
         val safeInitialPosition = initialPosition.coerceIn(0, maxValidPosition)
 
