@@ -58,6 +58,8 @@ class ImagePagerAdapter(private val posts: List<Post>) : RecyclerView.Adapter<Im
             // 使用 Coil 加载图片
             imageView.load(post.file_url) {
                 allowHardware(false) // 禁用硬件加速以避免某些设备闪退
+                memoryCacheKey(post.file_url)
+                diskCacheKey(post.file_url)
                 placeholderMemoryCacheKey(post.preview_url) // 占位图使用预览图
                 error(android.R.drawable.ic_menu_close_clear_cancel) // 加载失败显示默认错误图标
                 crossfade(true) // 渐变效果
