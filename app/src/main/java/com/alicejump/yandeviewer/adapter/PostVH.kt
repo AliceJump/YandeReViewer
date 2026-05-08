@@ -14,18 +14,21 @@ class PostVH(view: View) : RecyclerView.ViewHolder(view) {
     private val imageView: ImageView = view.findViewById(R.id.postImage)
     private val selectionOverlay: View = view.findViewById(R.id.selectionOverlay)
 
+    companion object {
+        private val originalCacheState = mutableMapOf<String, Boolean>()
+    }
+
     fun bind(post: Post, isSelectionMode: Boolean, isSelected: Boolean) {
         // Set the aspect ratio to prevent image jumping
         val layoutParams = imageView.layoutParams as ConstraintLayout.LayoutParams
         layoutParams.dimensionRatio = "${post.width}:${post.height}"
         imageView.layoutParams = layoutParams
 
-        val hasOriginalInCache = imageView.context.imageLoader.diskCache
-            ?.openSnapshot(post.file_url)
-            ?.let { snapshot ->
-                snapshot.close()
-                true
-            } ?: false
+        val hasOriginalInCache = originalCacheState[post.file_url] ?: (
+            imageView.context.imageLoader.diskCache
+                ?.openSnapshot(post.file_url)
+                ?.use { true } ?: false
+            ).also { originalCacheState[post.file_url] = it }
 
         val imageUrl = if (hasOriginalInCache) post.file_url else post.preview_url
 
