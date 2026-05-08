@@ -2,6 +2,7 @@ package com.alicejump.yandeviewer.adapter
 
 import android.view.View
 import android.widget.ImageView
+import android.util.LruCache
 import androidx.constraintlayout.widget.ConstraintLayout
 import androidx.core.view.isVisible
 import androidx.recyclerview.widget.RecyclerView
@@ -15,7 +16,7 @@ class PostVH(view: View) : RecyclerView.ViewHolder(view) {
     private val selectionOverlay: View = view.findViewById(R.id.selectionOverlay)
 
     companion object {
-        private val originalCacheState = mutableMapOf<String, Boolean>()
+        private val originalCacheState = object : LruCache<String, Boolean>(300) {}
     }
 
     fun bind(post: Post, isSelectionMode: Boolean, isSelected: Boolean) {
@@ -24,11 +25,14 @@ class PostVH(view: View) : RecyclerView.ViewHolder(view) {
         layoutParams.dimensionRatio = "${post.width}:${post.height}"
         imageView.layoutParams = layoutParams
 
-        val hasOriginalInCache = originalCacheState[post.file_url] ?: (
+        val cachedState = synchronized(originalCacheState) { originalCacheState.get(post.file_url) }
+        val hasOriginalInCache = cachedState ?: (
             imageView.context.imageLoader.diskCache
                 ?.openSnapshot(post.file_url)
                 ?.use { true } ?: false
-            ).also { originalCacheState[post.file_url] = it }
+            ).also {
+                synchronized(originalCacheState) { originalCacheState.put(post.file_url, it) }
+            }
 
         val imageUrl = if (hasOriginalInCache) post.file_url else post.preview_url
 
