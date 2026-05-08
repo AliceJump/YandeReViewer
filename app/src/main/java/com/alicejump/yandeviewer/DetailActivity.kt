@@ -9,6 +9,7 @@ import android.content.res.Configuration
 import android.graphics.Canvas
 import android.graphics.Color
 import android.os.Bundle
+import android.util.Log
 import android.util.Patterns
 import android.view.MenuItem
 import android.view.View
@@ -44,6 +45,7 @@ import androidx.core.view.isNotEmpty
 
 // 详情页 Activity，用于查看单张图片、标签、来源信息，并可进行收藏
 class DetailActivity : AppCompatActivity() {
+    private val logTag = "DetailActivity"
 
     // UI 元素
     private lateinit var viewPager: ViewPager2
@@ -331,6 +333,7 @@ class DetailActivity : AppCompatActivity() {
         ratingEState = intent.getBooleanExtra(MainActivity.EXTRA_RATING_E, false)
 
         if (posts == null) {
+            Log.w(logTag, "Detail posts cache miss. key=${intent.getStringExtra(EXTRA_POSTS_CACHE_KEY)}")
             Toast.makeText(this, R.string.detail_posts_not_found, Toast.LENGTH_SHORT).show()
             finish()
             return
