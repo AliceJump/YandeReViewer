@@ -7,16 +7,16 @@ import java.util.UUID
 object DetailPostCache {
     private const val MAX_CACHE_ENTRIES = 8
 
-    private val cache = LinkedHashMap<String, List<Post>>(MAX_CACHE_ENTRIES, 0.75f, true)
+    private val cache = object : LinkedHashMap<String, List<Post>>(MAX_CACHE_ENTRIES, 0.75f, true) {
+        override fun removeEldestEntry(eldest: MutableMap.MutableEntry<String, List<Post>>): Boolean {
+            return size > MAX_CACHE_ENTRIES
+        }
+    }
 
     @Synchronized
     fun put(posts: List<Post>): String {
         val key = UUID.randomUUID().toString()
         cache[key] = posts.toList()
-        while (cache.size > MAX_CACHE_ENTRIES) {
-            val oldestKey = cache.entries.firstOrNull()?.key ?: break
-            cache.remove(oldestKey)
-        }
         return key
     }
 
