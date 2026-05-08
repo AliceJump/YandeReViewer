@@ -45,7 +45,6 @@ import androidx.core.view.isNotEmpty
 
 // 详情页 Activity，用于查看单张图片、标签、来源信息，并可进行收藏
 class DetailActivity : AppCompatActivity() {
-    private val logTag = "DetailActivity"
 
     // UI 元素
     private lateinit var viewPager: ViewPager2
@@ -58,6 +57,7 @@ class DetailActivity : AppCompatActivity() {
     private var currentSource: String? = null
 
     companion object {
+        private const val TAG = "DetailActivity"
         const val FAB_DRAWER_DISTANCE = 300f
         const val FAB_ANIMATION_DURATION = 300L
         const val EXTRA_POSTS_CACHE_KEY = "posts_cache_key"
@@ -333,7 +333,7 @@ class DetailActivity : AppCompatActivity() {
         ratingEState = intent.getBooleanExtra(MainActivity.EXTRA_RATING_E, false)
 
         if (posts == null) {
-            Log.w(logTag, "Detail posts cache miss. key=${intent.getStringExtra(EXTRA_POSTS_CACHE_KEY)}")
+            Log.w(TAG, "Detail posts cache miss. key=${intent.getStringExtra(EXTRA_POSTS_CACHE_KEY)}")
             Toast.makeText(this, R.string.detail_posts_not_found, Toast.LENGTH_SHORT).show()
             finish()
             return
@@ -346,7 +346,7 @@ class DetailActivity : AppCompatActivity() {
         val maxValidPosition = posts.size - 1
         val positionById = if (postId >= 0L) posts.indexOfFirst { it.id == postId } else -1
         if (postId >= 0L && positionById < 0) {
-            Log.w(logTag, "Post id not found in cache list. postId=$postId, fallbackPosition=$position")
+            Log.w(TAG, "Post id not found in cache list. postId=$postId, fallbackPosition=$position")
         }
         val initialPosition = if (positionById >= 0) positionById else position
         val safeInitialPosition = initialPosition.coerceIn(0, maxValidPosition)

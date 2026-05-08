@@ -16,7 +16,7 @@ object DetailPostCache {
     @Synchronized
     fun put(posts: List<Post>): String {
         val key = UUID.randomUUID().toString()
-        cache[key] = posts.toList()
+        cache[key] = posts
         return key
     }
 
