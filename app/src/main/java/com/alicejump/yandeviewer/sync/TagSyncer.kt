@@ -5,8 +5,10 @@ import com.alicejump.yandeviewer.network.RetrofitClient
 import com.alicejump.yandeviewer.viewmodel.TagTypeCache
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.util.concurrent.atomic.AtomicBoolean
 
 object TagSyncer {
@@ -60,7 +62,8 @@ object TagSyncer {
                         }
                     }
 
-                    if (!newTagsFoundInPage) {
+                    val oldestIdInPage = tagsFromApi.lastOrNull()?.id?.toLong()
+                    if (!newTagsFoundInPage && oldestIdInPage != null && oldestIdInPage <= lastSavedId) {
                         syncCompletedSuccessfully = true
                         break
                     }
@@ -84,7 +87,9 @@ object TagSyncer {
                 }
 
             } finally {
-                TagTypeCache.flushNow(context)
+                withContext(NonCancellable) {
+                    TagTypeCache.flushNow(context)
+                }
                 isSyncing.set(false)
             }
         }
