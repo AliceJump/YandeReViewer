@@ -63,8 +63,8 @@ object TagSyncer {
                         }
                     }
 
-                    val maxIdInPage = tagsFromApi.maxOfOrNull { it.id.toLong() } ?: Long.MIN_VALUE
-                    if (!newTagsFoundInPage && (page == 1 || maxIdInPage < lastSavedId)) {
+                    val maxIdInPage = tagsFromApi.maxOfOrNull { it.id.toLong() }
+                    if (!newTagsFoundInPage && (page == 1 || (maxIdInPage != null && maxIdInPage < lastSavedId))) {
                         syncCompletedSuccessfully = true
                         break
                     }
