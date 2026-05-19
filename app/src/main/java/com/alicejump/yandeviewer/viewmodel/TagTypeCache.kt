@@ -104,17 +104,21 @@ object TagTypeCache {
 
     fun flush(context: Context) {
         scope.launch {
-            mutex.withLock {
-                if (pending.isEmpty()) return@launch
+            flushNow(context)
+        }
+    }
 
-                val merged = _tagTypes.value + pending
-                _tagTypes.value = merged
+    suspend fun flushNow(context: Context) {
+        mutex.withLock {
+            if (pending.isEmpty()) return
 
-                persistToFile(context, merged)
+            val merged = _tagTypes.value + pending
+            _tagTypes.value = merged
 
-                pending.clear()
-                lastWriteTime = System.currentTimeMillis()
-            }
+            persistToFile(context, merged)
+
+            pending.clear()
+            lastWriteTime = System.currentTimeMillis()
         }
     }
 

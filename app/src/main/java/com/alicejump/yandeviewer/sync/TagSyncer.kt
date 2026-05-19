@@ -26,6 +26,7 @@ object TagSyncer {
 
                 // 👉【新增】全量暂存区
                 val totalNewTags = mutableMapOf<String, Int>()
+                var foundAnyNewTags = false
 
                 while (true) {
                     val tagsFromApi = try {
@@ -44,9 +45,10 @@ object TagSyncer {
                     tagsFromApi.forEach { tag ->
 
                         // ✅ 只处理真正的新标签
-                        if (tag.id >= lastSavedId) {
+                        if (tag.id > lastSavedId) {
 
                             newTagsFoundInPage = true
+                            foundAnyNewTags = true
 
                             if (firstNewId == null) {
                                 firstNewId = tag.id.toLong()
@@ -57,27 +59,31 @@ object TagSyncer {
                         }
                     }
 
-                    if (page == 1 && !newTagsFoundInPage) {
+                    if (!newTagsFoundInPage) {
                         syncCompletedSuccessfully = true
                         break
+                    }
+
+                    // 分批写入，避免中途失败导致全部丢失
+                    if (totalNewTags.size >= 1500) {
+                        TagTypeCache.addTags(context, totalNewTags.toMap())
+                        totalNewTags.clear()
                     }
 
                     page++
                     delay(120)
                 }
 
-                // 👉【关键】只在最后一次写
-                if (syncCompletedSuccessfully && totalNewTags.isNotEmpty()) {
-
+                if (totalNewTags.isNotEmpty()) {
                     TagTypeCache.addTags(context, totalNewTags)
-
-                    firstNewId?.let {
-                        TagTypeCache.updateLastSyncedId(context, it)
-                    }
+                }
+                // 只有完整扫到“无新标签”时才推进 last_id，避免中断后跳过数据
+                if (syncCompletedSuccessfully && foundAnyNewTags) {
+                    firstNewId?.let { TagTypeCache.updateLastSyncedId(context, it) }
                 }
 
             } finally {
-                TagTypeCache.flush(context)   // ← 新增这行
+                TagTypeCache.flushNow(context)
                 isSyncing.set(false)
             }
         }
