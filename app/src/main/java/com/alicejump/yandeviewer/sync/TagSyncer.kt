@@ -62,8 +62,7 @@ object TagSyncer {
                         }
                     }
 
-                    val oldestIdInPage = tagsFromApi.lastOrNull()?.id?.toLong()
-                    if (!newTagsFoundInPage && oldestIdInPage != null && oldestIdInPage <= lastSavedId) {
+                    if (!newTagsFoundInPage && (page == 1 || foundAnyNewTags)) {
                         syncCompletedSuccessfully = true
                         break
                     }
