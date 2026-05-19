@@ -71,7 +71,7 @@ object TagSyncer {
 
                     // Batch writes to avoid losing all fetched data on mid-sync failure.
                     if (totalNewTags.size >= BATCH_WRITE_THRESHOLD) {
-                        TagTypeCache.addTags(context, totalNewTags.toMap())
+                        TagTypeCache.addTags(context, totalNewTags)
                         totalNewTags.clear()
                     }
 
