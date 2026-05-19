@@ -12,6 +12,7 @@ import java.util.concurrent.atomic.AtomicBoolean
 object TagSyncer {
 
     private val isSyncing = AtomicBoolean(false)
+    private const val BATCH_WRITE_THRESHOLD = 1500
 
     fun launchSync(context: Context) {
         if (isSyncing.getAndSet(true)) return
@@ -45,7 +46,7 @@ object TagSyncer {
                     tagsFromApi.forEach { tag ->
 
                         // ✅ 只处理真正的新标签
-                        if (tag.id > lastSavedId) {
+                        if (tag.id >= lastSavedId) {
 
                             newTagsFoundInPage = true
                             foundAnyNewTags = true
@@ -65,7 +66,7 @@ object TagSyncer {
                     }
 
                     // 分批写入，避免中途失败导致全部丢失
-                    if (totalNewTags.size >= 1500) {
+                    if (totalNewTags.size >= BATCH_WRITE_THRESHOLD) {
                         TagTypeCache.addTags(context, totalNewTags.toMap())
                         totalNewTags.clear()
                     }
