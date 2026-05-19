@@ -14,6 +14,7 @@ import java.util.concurrent.atomic.AtomicBoolean
 object TagSyncer {
 
     private val isSyncing = AtomicBoolean(false)
+    // Batch writes to reduce I/O pressure while avoiding excessive in-memory accumulation.
     private const val BATCH_WRITE_THRESHOLD = 1500
 
     fun launchSync(context: Context) {
@@ -62,7 +63,8 @@ object TagSyncer {
                         }
                     }
 
-                    if (!newTagsFoundInPage && (page == 1 || foundAnyNewTags)) {
+                    val maxIdInPage = tagsFromApi.maxOfOrNull { it.id.toLong() } ?: Long.MIN_VALUE
+                    if (!newTagsFoundInPage && (page == 1 || maxIdInPage < lastSavedId)) {
                         syncCompletedSuccessfully = true
                         break
                     }
