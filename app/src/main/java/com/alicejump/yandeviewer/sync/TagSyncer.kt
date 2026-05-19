@@ -69,7 +69,7 @@ object TagSyncer {
                         break
                     }
 
-                    // 分批写入，避免中途失败导致全部丢失
+                    // Batch writes to avoid losing all fetched data on mid-sync failure.
                     if (totalNewTags.size >= BATCH_WRITE_THRESHOLD) {
                         TagTypeCache.addTags(context, totalNewTags.toMap())
                         totalNewTags.clear()
@@ -82,7 +82,7 @@ object TagSyncer {
                 if (totalNewTags.isNotEmpty()) {
                     TagTypeCache.addTags(context, totalNewTags)
                 }
-                // 只有完整扫到“无新标签”时才推进 last_id，避免中断后跳过数据
+                // Advance last_id only after a full successful scan to avoid skipping data after interruptions.
                 if (syncCompletedSuccessfully && foundAnyNewTags) {
                     firstNewId?.let { TagTypeCache.updateLastSyncedId(context, it) }
                 }
