@@ -2,6 +2,10 @@
 
 [中文](#中文) | [English](README_en.md)
 
+## Downloads
+
+![downloads](./assets/downloads.svg)
+
 ---
 
 <a name="中文"></a>
