@@ -1,6 +1,7 @@
 package com.alicejump.yandeviewer.viewmodel
 
 import android.content.Context
+import android.util.Log
 import com.alicejump.yandeviewer.network.RetrofitClient
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
@@ -14,6 +15,8 @@ import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import java.io.File
 import java.util.concurrent.atomic.AtomicBoolean
+
+private const val TAG = "TagTypeCache"
 
 object TagTypeCache {
 
@@ -33,11 +36,16 @@ object TagTypeCache {
     private const val WRITE_INTERVAL = 800L   // 0.8秒合并窗口
 
     fun initialize(context: Context) {
-        if (initialized.getAndSet(true)) return
+        if (initialized.getAndSet(true)) {
+            Log.d(TAG, "Already initialized")
+            return
+        }
 
+        Log.d(TAG, "🚀 Initializing...")
         scope.launch {
             ensureAssetCopied(context)
             loadFromFile(context)
+            Log.d(TAG, "✅ Initialization complete, loaded ${_tagTypes.value.size} tags")
         }
     }
 
@@ -46,25 +54,23 @@ object TagTypeCache {
             val targetTagFile = File(context.filesDir, TAG_DICT_FILE)
             val targetIdFile = File(context.filesDir, LAST_ID_FILE)
 
-            // 如果已经存在，说明不是首次启动
-            if (targetTagFile.exists() && targetIdFile.exists()) {
-                return@withContext
-            }
-
+            // 总是从 assets 复制最新的标签文件，确保新标签被更新
             try {
                 context.assets.open(TAG_DICT_FILE).use { input ->
                     targetTagFile.outputStream().use { output ->
                         input.copyTo(output)
                     }
                 }
+                Log.d(TAG, "✅ Asset tags file copied/updated")
 
                 context.assets.open(LAST_ID_FILE).use { input ->
                     targetIdFile.outputStream().use { output ->
                         input.copyTo(output)
                     }
                 }
+                Log.d(TAG, "✅ Asset last_id file copied/updated")
             } catch (e: Exception) {
-                e.printStackTrace()
+                Log.e(TAG, "❌ Error copying asset files", e)
             }
         }
     }
@@ -76,13 +82,16 @@ object TagTypeCache {
                 if (tagDictFile.exists()) {
                     try {
                         val type = object : TypeToken<Map<String, Int>>() {}.type
-                        gson.fromJson<Map<String, Int>>(tagDictFile.reader(), type)?.let {
-                            _tagTypes.value = it
-                        }
+                        val loaded = gson.fromJson<Map<String, Int>>(tagDictFile.reader(), type)
+                        _tagTypes.value = loaded ?: emptyMap()
+                        Log.d(TAG, "📂 Loaded ${_tagTypes.value.size} tags from file")
                     } catch (e: Exception) {
+                        Log.e(TAG, "❌ Error parsing tags file", e)
                         // Handle possible json parsing errors by starting fresh
                         _tagTypes.value = emptyMap()
                     }
+                } else {
+                    Log.d(TAG, "❌ Tag file not found: ${tagDictFile.absolutePath}")
                 }
             }
         }
@@ -104,17 +113,25 @@ object TagTypeCache {
 
     fun flush(context: Context) {
         scope.launch {
-            mutex.withLock {
-                if (pending.isEmpty()) return@launch
+            flushNow(context)
+        }
+    }
 
-                val merged = _tagTypes.value + pending
-                _tagTypes.value = merged
-
-                persistToFile(context, merged)
-
-                pending.clear()
-                lastWriteTime = System.currentTimeMillis()
+    suspend fun flushNow(context: Context) {
+        mutex.withLock {
+            if (pending.isEmpty()) {
+                Log.d(TAG, "🔒 flushNow: no pending tags, skip")
+                return
             }
+
+            val merged = _tagTypes.value + pending
+            _tagTypes.value = merged
+
+            persistToFile(context, merged)
+            Log.d(TAG, "🔒 flushNow: persisted ${pending.size} pending tags, total=${merged.size}")
+
+            pending.clear()
+            lastWriteTime = System.currentTimeMillis()
         }
     }
 
@@ -124,12 +141,14 @@ object TagTypeCache {
         mutex.withLock {
             // 1. 先进缓冲
             pending.putAll(newTags)
+            Log.d(TAG, "➕ addTags called: ${newTags.size} new, pending=${pending.size}, cached=${_tagTypes.value.size}")
 
             val now = System.currentTimeMillis()
 
             // 2. 未到时间 → 只更新内存
             if (now - lastWriteTime < WRITE_INTERVAL) {
                 _tagTypes.value += newTags
+                Log.d(TAG, "   ⏱️ Time window not reached, only updated memory. totalCached=${_tagTypes.value.size}")
                 return
             }
 
@@ -138,6 +157,7 @@ object TagTypeCache {
             _tagTypes.value = merged
 
             persistToFile(context, merged)
+            Log.d(TAG, "   💾 Persisted ${pending.size} tags, total=${merged.size}")
 
             pending.clear()
             lastWriteTime = now
@@ -172,8 +192,9 @@ object TagTypeCache {
         withContext(Dispatchers.IO) {
             try {
                 File(context.filesDir, TAG_DICT_FILE).writeText(gson.toJson(tags))
+                Log.d(TAG, "✍️ Persisted ${tags.size} tags to ${context.filesDir}/$TAG_DICT_FILE")
             } catch (e: Exception) {
-                // Consider logging the error
+                Log.e(TAG, "❌ Error persisting tags to file", e)
             }
         }
     }
