@@ -80,4 +80,11 @@
     <string name="filter_artist">画师</string>
     <string name="filter_copyright">作品</string>
     <string name="filter_character">角色</string>
+    <string name="no_history_yet">暂无浏览记录</string>
+    <string name="history_cleared">浏览记录已清空</string>
+    <string name="clear_history_confirm">确定清空所有浏览记录吗？</string>
+    <string name="clear_history">清空浏览记录</string>
+    <string name="tag_favorited_chip_desc">已收藏标签</string>
+    <string name="post_link_copied">帖子链接已复制到剪贴板</string>
+    <string name="source_link_copied">来源链接已复制到剪贴板</string>
 </resources>

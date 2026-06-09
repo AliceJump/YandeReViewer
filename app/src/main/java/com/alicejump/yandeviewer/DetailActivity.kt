@@ -1,4 +1,5 @@
 package com.alicejump.yandeviewer
+
 import com.alicejump.yandeviewer.viewmodel.ArtistCache
 import com.alicejump.yandeviewer.utils.getArtistDisplayName
 import android.content.ClipData
@@ -123,6 +124,7 @@ class DetailActivity : AppCompatActivity() {
         decorView.addView(snapshot, params)
         return snapshot
     }
+
     private fun hideDrawerFab(fab: FloatingActionButton) {
         fab.animate().cancel()
         fab.translationY = 0f
@@ -197,6 +199,7 @@ class DetailActivity : AppCompatActivity() {
             collapseDrawerFab(internalFab)
         }
     }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_detail)
@@ -333,7 +336,10 @@ class DetailActivity : AppCompatActivity() {
         ratingEState = intent.getBooleanExtra(MainActivity.EXTRA_RATING_E, false)
 
         if (posts == null) {
-            Log.w(TAG, "Detail posts cache miss. key=${intent.getStringExtra(EXTRA_POSTS_CACHE_KEY)}")
+            Log.w(
+                TAG,
+                "Detail posts cache miss. key=${intent.getStringExtra(EXTRA_POSTS_CACHE_KEY)}"
+            )
             Toast.makeText(this, R.string.detail_posts_not_found, Toast.LENGTH_SHORT).show()
             finish()
             return
@@ -346,7 +352,10 @@ class DetailActivity : AppCompatActivity() {
         val maxValidPosition = posts.size - 1
         val positionById = if (postId >= 0L) posts.indexOfFirst { it.id == postId } else -1
         if (postId >= 0L && positionById < 0) {
-            Log.w(TAG, "Post id not found in cache list. postId=$postId, fallbackPosition=$position")
+            Log.w(
+                TAG,
+                "Post id not found in cache list. postId=$postId, fallbackPosition=$position"
+            )
         }
         val initialPosition = if (positionById >= 0) positionById else position
         val safeInitialPosition = initialPosition.coerceIn(0, maxValidPosition)
@@ -354,11 +363,12 @@ class DetailActivity : AppCompatActivity() {
         // ====== 初始化 ViewPager ======
         imagePagerAdapter = ImagePagerAdapter(posts)
         viewPager.adapter = imagePagerAdapter
-        viewPager.orientation = if (resources.configuration.orientation == Configuration.ORIENTATION_LANDSCAPE) {
-            ViewPager2.ORIENTATION_VERTICAL
-        } else {
-            ViewPager2.ORIENTATION_HORIZONTAL
-        }
+        viewPager.orientation =
+            if (resources.configuration.orientation == Configuration.ORIENTATION_LANDSCAPE) {
+                ViewPager2.ORIENTATION_VERTICAL
+            } else {
+                ViewPager2.ORIENTATION_HORIZONTAL
+            }
         viewPager.transitionName = transitionName
 
         // ====== 收藏按钮逻辑 ======
@@ -385,6 +395,21 @@ class DetailActivity : AppCompatActivity() {
             // 使用浏览器打开
             val intent = Intent(Intent.ACTION_VIEW, url.toUri())
             startActivity(intent)
+        }
+        internalFab.setOnLongClickListener {
+            val post =
+                posts.getOrNull(viewPager.currentItem)
+                    ?: return@setOnLongClickListener true
+
+            val url = "https://yande.re/post/show/${post.id}"
+
+            copyToClipboard(
+                "Post URL",
+                url,
+                getString(R.string.post_link_copied)
+            )
+
+            true
         }
         // ====== 标签缓存更新监听 ======
         lifecycleScope.launch {
@@ -460,18 +485,24 @@ class DetailActivity : AppCompatActivity() {
         return "https://www.pixiv.net/artworks/$illustId"
     }
 
-    private fun openSource(source: String) {
+    private fun normalizeSourceUrl(source: String): String {
         var url = source
 
-        // 先 Pixiv CDN → artworks
         convertPixivImageUrlToArtwork(url)?.let {
             url = it
         }
 
-        // 没协议补 https
-        if (!url.startsWith("http://") && !url.startsWith("https://")) {
+        if (!url.startsWith("http://") &&
+            !url.startsWith("https://")
+        ) {
             url = "https://$url"
         }
+
+        return url
+    }
+
+    private fun openSource(source: String) {
+        val url = normalizeSourceUrl(source)
 
         // 再判断是不是可打开链接
         if (Patterns.WEB_URL.matcher(url).matches()) {
@@ -504,10 +535,24 @@ class DetailActivity : AppCompatActivity() {
             View.OnClickListener { openSource(source) }
         })
 
+        sourceFab.setOnLongClickListener {
+            val source =
+                currentSource ?: return@setOnLongClickListener true
+
+            copyToClipboard(
+                "Source URL",
+                normalizeSourceUrl(source),
+                getString(R.string.source_link_copied)
+            )
+
+            true
+        }
+
         if (!isExpanded || hadSource != (currentSource != null)) {
             syncFabDrawerState()
         }
     }
+
     // 设置标签显示逻辑
     private fun setupTags(currentPostTags: Set<String>, allTagTypes: Map<String, Int>) {
         // 清空旧标签
@@ -580,6 +625,7 @@ class DetailActivity : AppCompatActivity() {
                                     Toast.LENGTH_SHORT
                                 ).show()
                             }
+
                             1 -> {
                                 BlacklistManager.add(tag)
                                 Toast.makeText(
@@ -588,12 +634,16 @@ class DetailActivity : AppCompatActivity() {
                                     Toast.LENGTH_SHORT
                                 ).show()
                             }
+
                             2 -> {
                                 if (alreadyFavorited) {
                                     FavoriteTagsManager.removeFavoriteTag(this, tag)
                                     Toast.makeText(
                                         this,
-                                        getString(R.string.removed_from_favorites_with_tag_name, tag),
+                                        getString(
+                                            R.string.removed_from_favorites_with_tag_name,
+                                            tag
+                                        ),
                                         Toast.LENGTH_SHORT
                                     ).show()
                                 } else {
@@ -630,6 +680,7 @@ class DetailActivity : AppCompatActivity() {
         updateGroupVisibility(generalLabel, generalTagsContainer)
         updateDividers()
     }
+
     private fun updateDividers() {
 
         val groups = listOf(
@@ -659,6 +710,7 @@ class DetailActivity : AppCompatActivity() {
                     View.GONE
         }
     }
+
     // 更新标签组和标题可见性
     private fun updateGroupVisibility(label: TextView, group: ChipGroup) {
 
@@ -672,6 +724,21 @@ class DetailActivity : AppCompatActivity() {
         super.onStop()
         // 页面关闭时刷新缓存
         TagTypeCache.flush(this)
+    }
+
+    private fun copyToClipboard(label: String, text: String, toastText: String) {
+        val clipboard =
+            getSystemService(CLIPBOARD_SERVICE) as ClipboardManager
+
+        clipboard.setPrimaryClip(
+            ClipData.newPlainText(label, text)
+        )
+
+        Toast.makeText(
+            this,
+            toastText,
+            Toast.LENGTH_SHORT
+        ).show()
     }
 
 }

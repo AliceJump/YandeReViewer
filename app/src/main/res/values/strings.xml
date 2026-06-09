@@ -85,4 +85,6 @@
     <string name="filter_artist">Artist</string>
     <string name="filter_copyright">Copyright</string>
     <string name="filter_character">Character</string>
+    <string name="post_link_copied">Post link copied</string>
+    <string name="source_link_copied">Source link copied</string>
 </resources>

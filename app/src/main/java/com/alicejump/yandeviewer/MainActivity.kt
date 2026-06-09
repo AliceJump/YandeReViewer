@@ -142,11 +142,18 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
 
         postViewModel.enableSearch(mode == FeedMode.NORMAL)
 
-        // ⭐ 强制关掉刷新动画（避免残留）
         swipeRefreshLayout.isRefreshing = false
+        swipeRefreshLayout.isEnabled = mode == FeedMode.NORMAL
+
+        if (mode == FeedMode.NORMAL) {
+            fabRefresh.show()
+        } else {
+            fabRefresh.hide()
+        }
 
         loadFeed()
     }
+
     private fun isBlacklisted(post: Post): Boolean {
         val blacklist = BlacklistManager.getAll()
         if (blacklist.isEmpty()) return false
@@ -252,18 +259,24 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
         fabRefresh = findViewById(R.id.fab_refresh)
 
         swipeRefreshLayout.setOnRefreshListener {
-            postAdapter.refresh()
+            loadFeed()
         }
 
         fabRefresh.setOnClickListener {
             loadFeed()
-            postAdapter.refresh()
         }
 
         fabScrollToTop.setOnClickListener {
             recyclerView.smoothScrollToPosition(0)
         }
 
+        val ratingListener = {
+            performSearch()
+        }
+
+        ratingSCheckbox.setOnClickListener { ratingListener() }
+        ratingQCheckbox.setOnClickListener { ratingListener() }
+        ratingECheckbox.setOnClickListener { ratingListener() }
     }
 
     private fun setupSearch() {
@@ -366,7 +379,12 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
                 val firstVisible = firstVisiblePositions.minOrNull() ?: 0
                 if (firstVisible > 0) {
                     fabScrollToTop.show()
-                    fabRefresh.show()
+
+                    if (currentMode == FeedMode.NORMAL) {
+                        fabRefresh.show()
+                    } else {
+                        fabRefresh.hide()
+                    }
                 } else {
                     fabScrollToTop.hide()
                     fabRefresh.hide()
